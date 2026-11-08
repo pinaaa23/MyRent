@@ -1,0 +1,31 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // Fungsi bantuan: mengecek apakah pengguna sudah login dan emailnya terverifikasi
+    function isAuthAndVerified() {
+      return request.auth != null && request.auth.token.email_verified == true;
+    }
+
+    // Koleksi cabang: Boleh dibaca siapa saja (karena dibutuhkan form Daftar),
+    // hanya boleh ditulis oleh user yang login & terverifikasi.
+    match /cabang/{cabangId} {
+      allow read: if true;
+      allow write: if isAuthAndVerified();
+    }
+
+    // Koleksi users/{uid}: Boleh dibuat oleh pemilik UID itu sendiri (saat pendaftaran),
+    // dibaca dan diubah hanya oleh pemilik UID tersebut.
+    match /users/{userId} {
+      allow create: if request.auth != null && request.auth.uid == userId;
+      allow read, update, delete: if request.auth != null && request.auth.uid == userId;
+    }
+
+    // Semua koleksi lainnya (items, kategori, customers, rentals, settings):
+    // Hanya user login dengan email terverifikasi yang boleh membaca dan menulis.
+    match /{document=**} {
+      allow read, write: if isAuthAndVerified();
+    }
+  }
+}

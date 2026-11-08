@@ -1,0 +1,33 @@
+package com.myrent.app.ui.navigation
+
+import androidx.annotation.StringRes
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Checkroom
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.ui.graphics.vector.ImageVector
+import com.myrent.app.R
+
+/**
+ * Definisi rute navigasi dan properti menu bottom bar
+ */
+sealed class Screen(
+    val route: String,
+    @StringRes val titleResId: Int = 0,
+    val icon: ImageVector? = null
+) {
+    // Rute Layar Otentikasi & Akun
+    object Login : Screen("login")
+    object Register : Screen("register")
+    object VerifyEmail : Screen("verify_email")
+    object ForgotPassword : Screen("forgot_password")
+    object MainApp : Screen("main_app")
+    object Settings : Screen("settings")
+
+    // Rute Bottom Navigation Menu
+    object Home : Screen("home", R.string.nav_home, Icons.Filled.Home)
+    object Rental : Screen("rental", R.string.nav_rent, Icons.AutoMirrored.Filled.ReceiptLong)
+    object Catalog : Screen("catalog", R.string.nav_catalog, Icons.Filled.Checkroom)
+    object Report : Screen("report", R.string.nav_report, Icons.Filled.BarChart)
+}

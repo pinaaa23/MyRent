@@ -1,0 +1,632 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources xmlns:ns1="urn:oasis:names:tc:xliff:document:1.2" xmlns:ns2="http://schemas.android.com/tools">
+    <attr format="reference" name="nestedScrollViewStyle"/>
+    <bool name="enable_system_alarm_service_default">true</bool>
+    <bool name="enable_system_foreground_service_default">true</bool>
+    <bool name="enable_system_job_service_default">false</bool>
+    <bool name="workmanager_test_configuration">false</bool>
+    <color name="accent_gold">#C9A96A</color>
+    <color name="androidx_core_ripple_material_light">#1f000000</color>
+    <color name="androidx_core_secondary_text_default_material_light">#8a000000</color>
+    <color name="browser_actions_bg_grey">#F5F5F5</color>
+    <color name="browser_actions_divider_color">#1E000000</color>
+    <color name="browser_actions_text_color">#DE000000</color>
+    <color name="browser_actions_title_color">#646464</color>
+    <color name="call_notification_answer_color">#1d873b</color>
+    <color name="call_notification_decline_color">#d93025</color>
+    <color name="common_google_signin_btn_text_dark_default">@android:color/white</color>
+    <color name="common_google_signin_btn_text_dark_disabled">#1F000000</color>
+    <color name="common_google_signin_btn_text_dark_focused">@android:color/black</color>
+    <color name="common_google_signin_btn_text_dark_pressed">@android:color/white</color>
+    <color name="common_google_signin_btn_text_light_default">#90000000</color>
+    <color name="common_google_signin_btn_text_light_disabled">#1F000000</color>
+    <color name="common_google_signin_btn_text_light_focused">#90000000</color>
+    <color name="common_google_signin_btn_text_light_pressed">#DE000000</color>
+    <color name="dark_background">#121212</color>
+    <color name="dark_surface">#1E1E1E</color>
+    <color name="notification_action_color_filter">#ffffffff</color>
+    <color name="notification_icon_bg_color">#ff9e9e9e</color>
+    <dimen name="browser_actions_context_menu_max_width">500dp</dimen>
+    <dimen name="browser_actions_context_menu_min_padding">20dp</dimen>
+    <dimen name="compat_button_inset_horizontal_material">4dp</dimen>
+    <dimen name="compat_button_inset_vertical_material">6dp</dimen>
+    <dimen name="compat_button_padding_horizontal_material">8dp</dimen>
+    <dimen name="compat_button_padding_vertical_material">4dp</dimen>
+    <dimen name="compat_control_corner_material">2dp</dimen>
+    <dimen name="compat_notification_large_icon_max_height">320dp</dimen>
+    <dimen name="compat_notification_large_icon_max_width">320dp</dimen>
+    <dimen name="notification_action_icon_size">32dp</dimen>
+    <dimen name="notification_action_text_size">13sp</dimen>
+    <dimen name="notification_big_circle_margin">12dp</dimen>
+    <dimen name="notification_content_margin_start">8dp</dimen>
+    <dimen name="notification_large_icon_height">64dp</dimen>
+    <dimen name="notification_large_icon_width">64dp</dimen>
+    <dimen name="notification_main_column_padding_top">10dp</dimen>
+    <dimen name="notification_media_narrow_margin">@dimen/notification_content_margin_start</dimen>
+    <dimen name="notification_right_icon_size">16dp</dimen>
+    <dimen name="notification_right_side_padding_top">4dp</dimen>
+    <dimen name="notification_small_icon_background_padding">3dp</dimen>
+    <dimen name="notification_small_icon_size_as_large">24dp</dimen>
+    <dimen name="notification_subtext_size">13sp</dimen>
+    <dimen name="notification_top_pad">10dp</dimen>
+    <dimen name="notification_top_pad_large_text">5dp</dimen>
+    <drawable name="notification_template_icon_bg">#3333B5E5</drawable>
+    <drawable name="notification_template_icon_low_bg">#0cffffff</drawable>
+    <item name="accessibility_action_clickable_span" type="id"/>
+    <item name="accessibility_custom_action_0" type="id"/>
+    <item name="accessibility_custom_action_1" type="id"/>
+    <item name="accessibility_custom_action_10" type="id"/>
+    <item name="accessibility_custom_action_11" type="id"/>
+    <item name="accessibility_custom_action_12" type="id"/>
+    <item name="accessibility_custom_action_13" type="id"/>
+    <item name="accessibility_custom_action_14" type="id"/>
+    <item name="accessibility_custom_action_15" type="id"/>
+    <item name="accessibility_custom_action_16" type="id"/>
+    <item name="accessibility_custom_action_17" type="id"/>
+    <item name="accessibility_custom_action_18" type="id"/>
+    <item name="accessibility_custom_action_19" type="id"/>
+    <item name="accessibility_custom_action_2" type="id"/>
+    <item name="accessibility_custom_action_20" type="id"/>
+    <item name="accessibility_custom_action_21" type="id"/>
+    <item name="accessibility_custom_action_22" type="id"/>
+    <item name="accessibility_custom_action_23" type="id"/>
+    <item name="accessibility_custom_action_24" type="id"/>
+    <item name="accessibility_custom_action_25" type="id"/>
+    <item name="accessibility_custom_action_26" type="id"/>
+    <item name="accessibility_custom_action_27" type="id"/>
+    <item name="accessibility_custom_action_28" type="id"/>
+    <item name="accessibility_custom_action_29" type="id"/>
+    <item name="accessibility_custom_action_3" type="id"/>
+    <item name="accessibility_custom_action_30" type="id"/>
+    <item name="accessibility_custom_action_31" type="id"/>
+    <item name="accessibility_custom_action_4" type="id"/>
+    <item name="accessibility_custom_action_5" type="id"/>
+    <item name="accessibility_custom_action_6" type="id"/>
+    <item name="accessibility_custom_action_7" type="id"/>
+    <item name="accessibility_custom_action_8" type="id"/>
+    <item name="accessibility_custom_action_9" type="id"/>
+    <item name="androidx_compose_ui_view_composition_context" type="id"/>
+    <item name="compose_view_saveable_id_tag" type="id"/>
+    <item name="consume_window_insets_tag" type="id"/>
+    <item name="hide_graphics_layer_in_inspector_tag" type="id"/>
+    <item name="hide_in_inspector_tag" type="id"/>
+    <item name="inspection_slot_table_set" type="id"/>
+    <item name="is_pooling_container_tag" type="id"/>
+    <item name="line1" type="id"/>
+    <item name="line3" type="id"/>
+    <item name="nav_controller_view_tag" type="id"/>
+    <item name="pooling_container_listener_holder_tag" type="id"/>
+    <item name="report_drawn" type="id"/>
+    <item name="tag_accessibility_actions" type="id"/>
+    <item name="tag_accessibility_clickable_spans" type="id"/>
+    <item name="tag_accessibility_heading" type="id"/>
+    <item name="tag_accessibility_pane_title" type="id"/>
+    <item name="tag_on_apply_window_listener" type="id"/>
+    <item name="tag_on_receive_content_listener" type="id"/>
+    <item name="tag_on_receive_content_mime_types" type="id"/>
+    <item name="tag_screen_reader_focusable" type="id"/>
+    <item name="tag_state_description" type="id"/>
+    <item name="tag_transition_group" type="id"/>
+    <item name="tag_unhandled_key_event_manager" type="id"/>
+    <item name="tag_unhandled_key_listeners" type="id"/>
+    <item name="tag_window_insets_animation_callback" type="id"/>
+    <item name="text" type="id"/>
+    <item name="text2" type="id"/>
+    <item name="title" type="id"/>
+    <id name="view_tree_lifecycle_owner"/>
+    <id name="view_tree_on_back_pressed_dispatcher_owner"/>
+    <id name="view_tree_saved_state_registry_owner"/>
+    <id name="view_tree_view_model_store_owner"/>
+    <item name="wrapped_composition_tag" type="id"/>
+    <integer name="google_play_services_version">12451000</integer>
+    <integer name="m3c_window_layout_in_display_cutout_mode">1</integer>
+    <integer name="status_bar_notification_info_maxnum">999</integer>
+    <string name="android.credentials.TYPE_PASSWORD_CREDENTIAL">Password</string>
+    <string name="androidx.credentials.TYPE_PUBLIC_KEY_CREDENTIAL">Passkey</string>
+    <string name="androidx_startup" translatable="false">androidx.startup</string>
+    <string name="app_name">MyRent</string>
+    <string name="btn_add_branch">Tambah Cabang Baru</string>
+    <string name="btn_add_category">Tambah Kategori</string>
+    <string name="btn_add_item">+ Tambah Barang</string>
+    <string name="btn_back_to_dashboard">Kembali ke Dashboard</string>
+    <string name="btn_back_to_login">Kembali ke Login</string>
+    <string name="btn_cancel">Batal</string>
+    <string name="btn_change_account">Ganti Akun</string>
+    <string name="btn_change_photo">Ganti Foto</string>
+    <string name="btn_confirm">Ya, Keluar</string>
+    <string name="btn_confirm_payment">Konfirmasi Pembayaran</string>
+    <string name="btn_delete">Hapus Barang</string>
+    <string name="btn_edit_rental">Edit Sewa</string>
+    <string name="btn_i_have_verified">Saya Sudah Verifikasi</string>
+    <string name="btn_login">Masuk</string>
+    <string name="btn_logout">Keluar</string>
+    <string name="btn_mark_returned">Sudah Dikembalikan</string>
+    <string name="btn_new_rental">+ Sewa Baru</string>
+    <string name="btn_pay">Lanjut ke Pembayaran</string>
+    <string name="btn_print_receipt">Cetak Nota</string>
+    <string name="btn_register">Daftar</string>
+    <string name="btn_resend_email">Kirim Ulang Email</string>
+    <string name="btn_resend_email_cooldown">Kirim Ulang (%1$ds)</string>
+    <string name="btn_save">Simpan</string>
+    <string name="btn_save_rental">Bayar</string>
+    <string name="btn_select_photo">Pilih Foto Barang</string>
+    <string name="btn_send_reset_link">Kirim Tautan Reset</string>
+    <string name="btn_send_wa">Kirim WA Nota</string>
+    <string name="call_notification_answer_action">Answer</string>
+    <string name="call_notification_answer_video_action">Video</string>
+    <string name="call_notification_decline_action">Decline</string>
+    <string name="call_notification_hang_up_action">Hang Up</string>
+    <string name="call_notification_incoming_text">Incoming call</string>
+    <string name="call_notification_ongoing_text">Ongoing call</string>
+    <string name="call_notification_screening_text">Screening an incoming call</string>
+    <string name="close_drawer">"Close navigation menu"</string>
+    <string name="close_sheet">"Close sheet"</string>
+    <string name="coming_soon">Segera hadir</string>
+    <string msgid="2523291102206661146" name="common_google_play_services_enable_button">Enable</string>
+    <string msgid="227660514972886228" name="common_google_play_services_enable_text"><ns1:g id="app_name">%1$s</ns1:g> won\'t work unless you enable Google Play services.</string>
+    <string msgid="5122002158466380389" name="common_google_play_services_enable_title">Enable Google Play services</string>
+    <string msgid="7153882981874058840" name="common_google_play_services_install_button">Install</string>
+    <string name="common_google_play_services_install_text"><ns1:g id="app_name">%1$s</ns1:g> won\'t run without Google Play services, which are missing from your device.</string>
+    <string msgid="7215213145546190223" name="common_google_play_services_install_title">Get Google Play services</string>
+    <string name="common_google_play_services_notification_channel_name">Google Play services availability</string>
+    <string name="common_google_play_services_notification_ticker">Google Play services error</string>
+    <string name="common_google_play_services_unknown_issue"><ns1:g id="app_name">%1$s</ns1:g> is having trouble with Google Play services. Please try again.</string>
+    <string name="common_google_play_services_unsupported_text"><ns1:g id="app_name">%1$s</ns1:g> won\'t run without Google Play services, which are not supported by your device.</string>
+    <string msgid="6556509956452265614" name="common_google_play_services_update_button">Update</string>
+    <string msgid="9053896323427875356" name="common_google_play_services_update_text"><ns1:g id="app_name">%1$s</ns1:g> won\'t run unless you update Google Play services.</string>
+    <string msgid="6006316683626838685" name="common_google_play_services_update_title">Update Google Play services</string>
+    <string name="common_google_play_services_updating_text"><ns1:g id="app_name">%1$s</ns1:g> won\'t run without Google Play services, which are currently updating.</string>
+    <string name="common_google_play_services_wear_update_text">New version of Google Play services needed. It will update itself shortly.</string>
+    <string name="common_open_on_phone">Open on phone</string>
+    <string name="common_signin_button_text">Sign in</string>
+    <string name="common_signin_button_text_long">Sign in with Google</string>
+    <string name="confirm_delete_category_msg">Apakah Anda yakin ingin menghapus kategori \"%1$s\"?</string>
+    <string name="confirm_delete_category_title">Hapus Kategori?</string>
+    <string name="confirm_delete_item_msg">Apakah Anda yakin ingin menghapus barang \"%1$s\"?</string>
+    <string name="confirm_delete_item_title">Hapus Barang?</string>
+    <string name="confirm_logout_msg">Apakah Anda yakin ingin keluar dari akun MyRent?</string>
+    <string name="confirm_logout_title">Keluar Akun?</string>
+    <string name="confirm_return_msg">Tandai sewa \"%1$s\" sebagai sudah dikembalikan? Status barang akan kembali Tersedia.</string>
+    <string name="confirm_return_title">Kembalikan Barang?</string>
+    <string name="copy_toast_msg">Link copied to clipboard</string>
+    <string name="default_error_message">"Invalid input"</string>
+    <string name="default_popup_window_title" ns2:ignore="ExtraTranslation">"Pop-Up Window"</string>
+    <string name="desc_forgot_password">Masukkan email kamu yang terdaftar untuk menerima tautan reset kata sandi.</string>
+    <string name="desc_verify_email">Kami telah mengirimkan email verifikasi ke:\n%1$s\n\nSilakan buka inbox email kamu dan tekan tautan verifikasi sebelum masuk.</string>
+    <string name="dropdown_menu">"Dropdown menu"</string>
+    <string name="email_not_verified">Email belum diverifikasi. Silakan periksa inbox/folder spam email kamu.</string>
+    <string name="email_sent_success">Email verifikasi berhasil dikirim ulang.</string>
+    <string name="empty_available_items_warning">Tidak ada barang berstatus Tersedia di cabang ini.</string>
+    <string name="empty_cabang_warning">Belum ada cabang terdaftar di database.</string>
+    <string name="empty_followup_desc">Tidak ada barang yang perlu di-follow up hari ini.</string>
+    <string name="empty_followup_title">Semua Sewa Aman!</string>
+    <string name="empty_items_desc">Belum ada barang di cabang ini. Ketuk + Tambah Barang untuk memulai.</string>
+    <string name="empty_items_title">Belum Ada Barang</string>
+    <string name="empty_rentals_desc">Belum ada sewa tercatat di cabang ini. Ketuk + Sewa Baru untuk mencatat sewa.</string>
+    <string name="empty_rentals_title">Belum Ada Transaksi Sewa</string>
+    <string name="error_cannot_delete_rented">Barang yang sedang disewa tidak dapat dihapus.</string>
+    <string name="error_category_name_empty">Nama kategori tidak boleh kosong.</string>
+    <string name="error_category_used">Kategori \"%1$s\" tidak dapat dihapus karena masih digunakan oleh barang.</string>
+    <string name="error_dp_exceeds_total">Uang Muka / DP tidak boleh melebihi Total Biaya Sewa.</string>
+    <string name="error_email_already_used">Email ini sudah terdaftar. Silakan gunakan email lain atau masuk.</string>
+    <string name="error_empty_field">Semua kolom wajib diisi.</string>
+    <string name="error_invalid_email">Format email tidak valid.</string>
+    <string name="error_item_category_empty">Kategori barang wajib dipilih.</string>
+    <string name="error_item_name_empty">Nama barang tidak boleh kosong.</string>
+    <string name="error_item_price_invalid">Harga sewa harus lebih dari 0.</string>
+    <string name="error_item_stock_invalid">Jumlah stok minimal 1.</string>
+    <string name="error_no_network">Tidak ada koneksi internet. Periksa koneksi Anda.</string>
+    <string name="error_password_mismatch">Kata sandi dan konfirmasi kata sandi tidak sama.</string>
+    <string name="error_quantity_exceeds_stock">Jumlah disewa (%1$d) melebihi stok yang tersedia (%2$d).</string>
+    <string name="error_select_cabang">Silakan pilih cabang terlebih dahulu.</string>
+    <string name="error_short_password">Kata sandi minimal 6 karakter.</string>
+    <string name="error_too_many_requests">Terlalu banyak percobaan. Silakan coba beberapa saat lagi.</string>
+    <string name="error_unknown">Terjadi kesalahan. Silakan coba lagi.</string>
+    <string name="error_wrong_credentials">Email atau kata sandi salah.</string>
+    <string name="fallback_menu_item_copy_link">Copy link</string>
+    <string name="fallback_menu_item_open_in_browser">Open in browser</string>
+    <string name="fallback_menu_item_share_link">Share link</string>
+    <string name="filter_active">Berjalan</string>
+    <string name="filter_all">Semua</string>
+    <string name="filter_completed">Selesai</string>
+    <string name="filter_due_soon">Hampir Jatuh Tempo</string>
+    <string name="filter_overdue">Terlambat</string>
+    <string name="gcm_defaultSenderId" translatable="false">464736777558</string>
+    <string name="google_api_key" translatable="false">AIzaSyCKpneFwtHL4DbtVuU4VYcnxaIodBLbi-A</string>
+    <string name="google_app_id" translatable="false">1:464736777558:android:ea2d45cc97b442c1cad2f7</string>
+    <string name="google_crash_reporting_api_key" translatable="false">AIzaSyCKpneFwtHL4DbtVuU4VYcnxaIodBLbi-A</string>
+    <string name="google_storage_bucket" translatable="false">myrent-4f12c.firebasestorage.app</string>
+    <string name="in_progress">In progress</string>
+    <string name="indeterminate">Partially checked</string>
+    <string name="label_branch">Cabang Tempat Tugas</string>
+    <string name="label_branch_address">Alamat</string>
+    <string name="label_branch_name">Nama Cabang</string>
+    <string name="label_branch_phone">Nomor WhatsApp</string>
+    <string name="label_category_name">Nama Kategori</string>
+    <string name="label_confirm_password">Ulangi Kata Sandi</string>
+    <string name="label_dp">Uang Muka / DP (Rp)</string>
+    <string name="label_duration">Lama Sewa</string>
+    <string name="label_email">Email</string>
+    <string name="label_end_date">Tanggal Kembali</string>
+    <string name="label_full_name">Nama Lengkap</string>
+    <string name="label_item_category">Kategori</string>
+    <string name="label_item_name">Nama Barang</string>
+    <string name="label_item_notes">Catatan (opsional)</string>
+    <string name="label_item_price">Harga Sewa Per Unit (Rp)</string>
+    <string name="label_item_size">Ukuran (opsional)</string>
+    <string name="label_item_status">Status Barang</string>
+    <string name="label_item_stock">Jumlah Stok Barang</string>
+    <string name="label_notes_guarantee">Catatan / Jaminan (Ukuran/KTP/dll)</string>
+    <string name="label_password">Kata Sandi</string>
+    <string name="label_payment_status">Status Pembayaran</string>
+    <string name="label_remaining_payment">Sisa Pembayaran</string>
+    <string name="label_rental_quantity">Jumlah Barang Disewa</string>
+    <string name="label_select_cabang">Pilih Cabang</string>
+    <string name="label_select_item">Pilih Barang (Tersedia)</string>
+    <string name="label_start_date">Tanggal Mulai</string>
+    <string name="label_tenant_name">Nama Penyewa</string>
+    <string name="label_tenant_phone">Nomor WA Penyewa</string>
+    <string name="label_total_price">Total Biaya Sewa (Rp)</string>
+    <string name="link_forgot_password">Lupa kata sandi?</string>
+    <string name="link_login">Masuk</string>
+    <string name="link_register">Daftar</string>
+    <string name="loading_cabang">Memuat daftar cabang…</string>
+    <string name="m3c_bottom_sheet_collapse_description">Collapse bottom sheet</string>
+    <string name="m3c_bottom_sheet_dismiss_description">Dismiss bottom sheet</string>
+    <string name="m3c_bottom_sheet_drag_handle_description">Drag handle</string>
+    <string name="m3c_bottom_sheet_expand_description">Expand bottom sheet</string>
+    <string name="m3c_bottom_sheet_pane_title">Bottom Sheet</string>
+    <string name="m3c_date_input_headline">Entered date</string>
+    <string name="m3c_date_input_headline_description">Entered date: %1$s</string>
+    <string name="m3c_date_input_invalid_for_pattern">Date does not match expected pattern: %1$s</string>
+    <string name="m3c_date_input_invalid_not_allowed">Date not allowed: %1$s</string>
+    <string name="m3c_date_input_invalid_year_range">
+        Date out of expected year range %1$s - %2$s
+    </string>
+    <string name="m3c_date_input_label">Date</string>
+    <string name="m3c_date_input_no_input_description">None</string>
+    <string name="m3c_date_input_title">Select date</string>
+    <string name="m3c_date_picker_headline">"Selected date"</string>
+    <string name="m3c_date_picker_headline_description">Current selection: %1$s</string>
+    <string name="m3c_date_picker_navigate_to_year_description">Navigate to year %1$s</string>
+    <string name="m3c_date_picker_no_selection_description">None</string>
+    <string name="m3c_date_picker_scroll_to_earlier_years">Scroll to show earlier years</string>
+    <string name="m3c_date_picker_scroll_to_later_years">Scroll to show later years</string>
+    <string name="m3c_date_picker_switch_to_calendar_mode">Switch to calendar input mode</string>
+    <string name="m3c_date_picker_switch_to_day_selection">
+        "Swipe to select a year, or tap to switch back to selecting a day"
+    </string>
+    <string name="m3c_date_picker_switch_to_input_mode">Switch to text input mode</string>
+    <string name="m3c_date_picker_switch_to_next_month">"Change to next month"</string>
+    <string name="m3c_date_picker_switch_to_previous_month">"Change to previous month"</string>
+    <string name="m3c_date_picker_switch_to_year_selection">"Switch to selecting a year"</string>
+    <string name="m3c_date_picker_title">"Select date"</string>
+    <string name="m3c_date_picker_today_description">Today</string>
+    <string name="m3c_date_picker_year_picker_pane_title">Year picker visible</string>
+    <string name="m3c_date_range_input_invalid_range_input">Invalid date range input</string>
+    <string name="m3c_date_range_input_title">Enter dates</string>
+    <string name="m3c_date_range_picker_day_in_range">In range</string>
+    <string name="m3c_date_range_picker_end_headline">End date</string>
+    <string name="m3c_date_range_picker_scroll_to_next_month">Scroll to show the next month</string>
+    <string name="m3c_date_range_picker_scroll_to_previous_month">Scroll to show the previous month</string>
+    <string name="m3c_date_range_picker_start_headline">Start date</string>
+    <string name="m3c_date_range_picker_title">Select dates</string>
+    <string name="m3c_dialog">"Dialog"</string>
+    <string name="m3c_dropdown_menu_collapsed">Collapsed</string>
+    <string name="m3c_dropdown_menu_expanded">Expanded</string>
+    <string name="m3c_dropdown_menu_toggle">Toggle dropdown menu</string>
+    <string name="m3c_search_bar_search">Search</string>
+    <string name="m3c_snackbar_dismiss">Dismiss</string>
+    <string name="m3c_suggestions_available">Suggestions below</string>
+    <string name="m3c_time_picker_am">AM</string>
+    <string name="m3c_time_picker_hour">Hour</string>
+    <string name="m3c_time_picker_hour_24h_suffix">%1$d hours</string>
+    <string name="m3c_time_picker_hour_selection">Select hour</string>
+    <string name="m3c_time_picker_hour_suffix">%1$d o\'clock</string>
+    <string name="m3c_time_picker_hour_text_field">for hour</string>
+    <string name="m3c_time_picker_minute">Minute</string>
+    <string name="m3c_time_picker_minute_selection">Select minutes</string>
+    <string name="m3c_time_picker_minute_suffix">%1$d minutes</string>
+    <string name="m3c_time_picker_minute_text_field">for minutes</string>
+    <string name="m3c_time_picker_period_toggle_description">Select AM or PM</string>
+    <string name="m3c_time_picker_pm">PM</string>
+    <string name="m3c_tooltip_long_press_label">Show tooltip</string>
+    <string name="m3c_tooltip_pane_description">Tooltip</string>
+    <string name="menu_manage_branch">Kelola Cabang</string>
+    <string name="menu_manage_category">Kelola Kategori</string>
+    <string name="metode_qris">QRIS</string>
+    <string name="metode_tunai">Tunai (Cash)</string>
+    <string name="nav_catalog">Katalog</string>
+    <string name="nav_home">Beranda</string>
+    <string name="nav_rent">Sewa</string>
+    <string name="nav_report">Laporan</string>
+    <string name="navigation_menu">"Navigation menu"</string>
+    <string name="not_selected">Not selected</string>
+    <string name="placeholder_email">nama@email.com</string>
+    <string name="placeholder_search_rental">Cari nama penyewa atau No WA...</string>
+    <string name="project_id" translatable="false">myrent-4f12c</string>
+    <string name="qr_code_desc">Silakan tunjukkan QRIS di atas kepada konsumen</string>
+    <string name="range_end">"Range end"</string>
+    <string name="range_start">"Range start"</string>
+    <string name="rented_status_warning">Sedang Disewa (Tidak dapat diubah manual)</string>
+    <string name="reset_link_sent_success">Tautan reset kata sandi telah dikirim ke email kamu.</string>
+    <string name="section_profile">Profil Akun</string>
+    <string name="selected">Selected</string>
+    <string name="state_empty">Empty</string>
+    <string name="state_off">Off</string>
+    <string name="state_on">On</string>
+    <string name="status_available">Tersedia</string>
+    <string name="status_bar_notification_info_overflow">999+</string>
+    <string name="status_followed_up">Sudah di-follow up</string>
+    <string name="status_maintenance">Perbaikan</string>
+    <string name="status_out_of_stock">Stok Habis</string>
+    <string name="status_paid">LUNAS</string>
+    <string name="status_rented">Disewa</string>
+    <string name="status_unpaid">BELUM LUNAS</string>
+    <string name="summary_active_rentals">Sewa Berjalan</string>
+    <string name="summary_due_today">Jatuh Tempo Hari Ini</string>
+    <string name="summary_revenue_today">Omzet Hari Ini</string>
+    <string name="switch_role">Switch</string>
+    <string name="tab">Tab</string>
+    <string name="tag_due_today">HARI H</string>
+    <string name="tag_due_tomorrow">H-1</string>
+    <string name="template_percent"><ns1:g id="percentage">%1$d</ns1:g> percent.</string>
+    <string name="text_already_have_account">Sudah punya akun? </string>
+    <string name="text_dont_have_account">Belum punya akun? </string>
+    <string name="title_add_branch">Tambah Cabang</string>
+    <string name="title_add_category">Tambah Kategori Baru</string>
+    <string name="title_add_item">Tambah Barang Baru</string>
+    <string name="title_add_rental">Sewa Baru</string>
+    <string name="title_catalog">Katalog Barang</string>
+    <string name="title_edit_branch">Edit Cabang</string>
+    <string name="title_edit_category">Edit Kategori</string>
+    <string name="title_edit_item">Edit Barang</string>
+    <string name="title_forgot_password">Lupa Kata Sandi</string>
+    <string name="title_login">Masuk ke MyRent</string>
+    <string name="title_manage_branch">Kelola Cabang</string>
+    <string name="title_manage_category">Kelola Kategori</string>
+    <string name="title_need_follow_up">Perlu di-Follow Up</string>
+    <string name="title_payment_method">Pilih Metode Pembayaran</string>
+    <string name="title_receipt">Nota Transaksi</string>
+    <string name="title_register">Buat Akun Baru</string>
+    <string name="title_rental_detail">Detail Transaksi Sewa</string>
+    <string name="title_rentals">Sewa Barang</string>
+    <string name="title_settings">Pengaturan</string>
+    <string name="title_verify_email">Cek Email Kamu</string>
+    <string name="tooltip_description">tooltip</string>
+    <string name="tooltip_label">show tooltip</string>
+    <style name="DialogWindowTheme">
+        <item name="android:windowClipToOutline">false</item>
+    </style>
+    <style name="EdgeToEdgeFloatingDialogTheme" parent="android:Theme.DeviceDefault.Dialog">
+        <item name="android:windowLayoutInDisplayCutoutMode" ns2:targetApi="27">@integer/m3c_window_layout_in_display_cutout_mode</item>
+        <item name="android:windowClipToOutline">false</item>
+        <item name="android:windowIsFloating">false</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+        <item name="android:windowNoTitle">true</item>
+        <item name="android:windowBackground">@android:color/transparent</item>
+        <item name="android:windowElevation">0dp</item>
+    </style>
+    <style name="EdgeToEdgeFloatingDialogWindowTheme">
+        <item name="android:dialogTheme">@style/EdgeToEdgeFloatingDialogTheme</item>
+    </style>
+    <style name="FloatingDialogTheme">
+        <item name="android:windowIsFloating">false</item>
+    </style>
+    <style name="FloatingDialogWindowTheme">
+        <item name="android:windowClipToOutline">false</item>
+        <item name="android:dialogTheme">@style/FloatingDialogTheme</item>
+    </style>
+    <style name="TextAppearance.Compat.Notification" parent="@android:style/TextAppearance.StatusBar.EventContent"/>
+    <style name="TextAppearance.Compat.Notification.Info">
+        <item name="android:textSize">12sp</item>
+        <item name="android:textColor">?android:attr/textColorSecondary</item>
+    </style>
+    <style name="TextAppearance.Compat.Notification.Line2" parent="TextAppearance.Compat.Notification.Info"/>
+    <style name="TextAppearance.Compat.Notification.Time">
+        <item name="android:textSize">12sp</item>
+        <item name="android:textColor">?android:attr/textColorSecondary</item>
+    </style>
+    <style name="TextAppearance.Compat.Notification.Title" parent="@android:style/TextAppearance.StatusBar.EventContent.Title"/>
+    <style name="Theme.Hidden" parent="@android:style/Theme.DeviceDefault">
+        <item name="android:windowTranslucentStatus">true</item>
+        <item name="android:windowTranslucentNavigation">true</item>
+    </style>
+    <style name="Theme.MyRent" parent="android:Theme.Material.NoActionBar">
+        <item name="android:statusBarColor">#121212</item>
+        <item name="android:navigationBarColor">#1E1E1E</item>
+        <item name="android:windowLightStatusBar">false</item>
+        <item name="android:windowLightNavigationBar">false</item>
+    </style>
+    <style name="Theme.PlayCore.Transparent" parent="android:Theme">
+<item name="android:windowIsTranslucent">true</item>
+<item name="android:windowBackground">@android:color/transparent</item>
+<item name="android:windowContentOverlay">@null</item>
+<item name="android:windowNoTitle">true</item>
+<item name="android:windowIsFloating">true</item>
+<item name="android:backgroundDimEnabled">false</item>
+</style>
+    <style name="Widget.Compat.NotificationActionContainer" parent=""/>
+    <style name="Widget.Compat.NotificationActionText" parent=""/>
+    <declare-styleable name="ActivityNavigator">
+        <attr name="android:name"/>
+        <attr format="string" name="action"/>
+        <attr format="string" name="data"/>
+        <attr format="string" name="dataPattern"/>
+        <attr format="string" name="targetPackage"/>
+    </declare-styleable>
+    <declare-styleable name="Capability">
+        
+        <attr format="reference" name="queryPatterns"/>
+        
+        <attr format="boolean" name="shortcutMatchRequired"/>
+    </declare-styleable>
+    <declare-styleable name="ColorStateListItem">
+        
+        <attr name="android:color"/>
+        
+        <attr format="float" name="alpha"/>
+        <attr name="android:alpha"/>
+        
+        <attr format="float" name="lStar"/>
+        <attr name="android:lStar"/>
+    </declare-styleable>
+    <declare-styleable name="FontFamily">
+        
+        <attr format="string" name="fontProviderAuthority"/>
+        
+        <attr format="string" name="fontProviderPackage"/>
+        
+        <attr format="string" name="fontProviderQuery"/>
+        
+        <attr format="string" name="fontProviderFallbackQuery"/>
+        
+        <attr format="reference" name="fontProviderCerts"/>
+        
+        <attr name="fontProviderFetchStrategy">
+            
+            <enum name="blocking" value="0"/>
+            
+            <enum name="async" value="1"/>
+        </attr>
+        
+        <attr format="integer" name="fontProviderFetchTimeout">
+            
+            <enum name="forever" value="-1"/>
+        </attr>
+        
+        <attr format="string" name="fontProviderSystemFontFamily"/>
+    </declare-styleable>
+    <declare-styleable name="FontFamilyFont">
+        
+        <attr name="fontStyle">
+            <enum name="normal" value="0"/>
+            <enum name="italic" value="1"/>
+        </attr>
+        
+        <attr format="reference" name="font"/>
+        
+        <attr format="integer" name="fontWeight"/>
+        
+        <attr format="string" name="fontVariationSettings"/>
+        
+        <attr format="integer" name="ttcIndex"/>
+        
+        <attr name="android:fontStyle"/>
+        <attr name="android:font"/>
+        <attr name="android:fontWeight"/>
+        <attr name="android:fontVariationSettings"/>
+        <attr name="android:ttcIndex"/>
+    </declare-styleable>
+    <declare-styleable name="GradientColor">
+        
+        <attr name="android:startColor"/>
+        
+        <attr name="android:centerColor"/>
+        
+        <attr name="android:endColor"/>
+        
+        <attr name="android:type"/>
+
+        
+        
+        <attr name="android:gradientRadius"/>
+
+        
+        
+        <attr name="android:centerX"/>
+        
+        <attr name="android:centerY"/>
+
+        
+        
+        <attr name="android:startX"/>
+        
+        <attr name="android:startY"/>
+        
+        <attr name="android:endX"/>
+        
+        <attr name="android:endY"/>
+
+        
+        <attr name="android:tileMode"/>
+    </declare-styleable>
+    <declare-styleable name="GradientColorItem">
+        
+        <attr name="android:offset"/>
+        
+        <attr name="android:color"/>
+    </declare-styleable>
+    <declare-styleable name="LoadingImageView"><attr name="imageAspectRatioAdjust">
+<enum name="none" value="0"/>
+
+<enum name="adjust_width" value="1"/>
+
+<enum name="adjust_height" value="2"/>
+
+</attr>
+
+<attr format="float" name="imageAspectRatio"/>
+
+<attr format="boolean" name="circleCrop"/>
+</declare-styleable>
+    <declare-styleable name="NavAction">
+        <attr name="android:id"/>
+        <attr format="reference" name="destination"/>
+        <attr format="boolean" name="launchSingleTop"/>
+        <attr format="boolean" name="restoreState"/>
+        <attr format="reference" name="popUpTo"/>
+        <attr format="boolean" name="popUpToInclusive"/>
+        <attr format="boolean" name="popUpToSaveState"/>
+        <attr format="reference" name="enterAnim"/>
+        <attr format="reference" name="exitAnim"/>
+        <attr format="reference" name="popEnterAnim"/>
+        <attr format="reference" name="popExitAnim"/>
+    </declare-styleable>
+    <declare-styleable name="NavArgument">
+        <attr name="android:name"/>
+        <attr name="android:defaultValue"/>
+        <attr format="boolean" name="nullable"/>
+        <attr format="string" name="argType"/>
+    </declare-styleable>
+    <declare-styleable name="NavDeepLink">
+        <attr format="string" name="uri"/>
+        <attr format="string" name="action"/>
+        <attr format="string" name="mimeType"/>
+        <attr name="android:autoVerify"/>
+    </declare-styleable>
+    <declare-styleable name="NavGraphNavigator">
+        <attr format="reference" name="startDestination"/>
+    </declare-styleable>
+    <declare-styleable name="NavHost">
+        <attr format="reference" name="navGraph"/>
+    </declare-styleable>
+    <declare-styleable name="NavInclude">
+        <attr format="reference" name="graph"/>
+    </declare-styleable>
+    <declare-styleable name="Navigator">
+        <attr name="android:id"/>
+        <attr format="string" name="route"/>
+        <attr name="android:label"/>
+    </declare-styleable>
+    <declare-styleable name="SignInButton"><attr format="reference" name="buttonSize">
+<enum name="standard" value="0"/>
+
+<enum name="wide" value="1"/>
+
+<enum name="icon_only" value="2"/>
+
+</attr>
+<attr format="reference" name="colorScheme">
+<enum name="dark" value="0"/>
+
+<enum name="light" value="1"/>
+
+<enum name="auto" value="2"/>
+
+</attr>
+
+<attr format="reference|string" name="scopeUris"/>
+</declare-styleable>
+</resources>

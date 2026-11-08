@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "464736777558",
+    "project_id": "myrent-4f12c",
+    "storage_bucket": "myrent-4f12c.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:464736777558:android:ea2d45cc97b442c1cad2f7",
+        "android_client_info": {
+          "package_name": "com.myrent.app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCKpneFwtHL4DbtVuU4VYcnxaIodBLbi-A"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
