@@ -22,6 +22,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Checkroom
+import androidx.compose.material.icons.filled.Person
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -54,6 +55,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.myrent.app.R
+import com.myrent.app.data.customer.normalizeNoWa
 import com.myrent.app.data.foto.FotoRepository
 import com.myrent.app.data.items.Item
 import com.myrent.app.data.rentals.Rental
@@ -75,7 +77,7 @@ fun calculateDays(startMs: Long, endMs: Long): Int {
 }
 
 /**
- * LANGKAH 2 - Bottom Sheet Formulir "Sewa Baru" dengan Ringkasan Barang Terpilih
+ * LANGKAH 2 - Bottom Sheet Formulir "Sewa Baru" dengan Saran Otomatis Penyewa & Format Rupiah
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -93,6 +95,8 @@ fun SewaBaruBottomSheet(
     val uiState by viewModel.uiState.collectAsState()
     val isLoading = uiState is RentalUiState.Loading
 
+    val customerList by viewModel.customerList.collectAsState()
+
     val kasirNama by viewModel.kasirNama.collectAsState()
     val cabangNama by viewModel.cabangNama.collectAsState()
     val cabangAlamat by viewModel.cabangAlamat.collectAsState()
@@ -100,6 +104,9 @@ fun SewaBaruBottomSheet(
 
     var namaPenyewa by remember { mutableStateOf(rentalToEdit?.namaPenyewa ?: "") }
     var noWa by remember { mutableStateOf(rentalToEdit?.noWa ?: "") }
+
+    var showNamaSuggestions by remember { mutableStateOf(false) }
+    var showWaSuggestions by remember { mutableStateOf(false) }
 
     val calStart = remember { Calendar.getInstance().apply { timeInMillis = rentalToEdit?.tanggalMulai ?: System.currentTimeMillis() } }
     val calEnd = remember { Calendar.getInstance().apply { timeInMillis = rentalToEdit?.tanggalKembali ?: (System.currentTimeMillis() + 86400000L) } }
@@ -109,6 +116,7 @@ fun SewaBaruBottomSheet(
 
     var lamaHari by remember { mutableStateOf(calculateDays(tglMulaiMs, tglKembaliMs)) }
     var jumlahText by remember { mutableStateOf(rentalToEdit?.jumlah?.toString() ?: "1") }
+
     var hargaTotalText by remember(selectedItem, lamaHari, jumlahText, rentalToEdit) {
         mutableStateOf(
             if (rentalToEdit != null) {
@@ -116,9 +124,10 @@ fun SewaBaruBottomSheet(
             } else if (selectedItem != null) {
                 val jml = jumlahText.toIntOrNull() ?: 1
                 (selectedItem.hargaSewa * lamaHari.toLong() * jml.toLong()).toString()
-            } else ""
+            } else "0"
         )
     }
+
     var dpText by remember { mutableStateOf(rentalToEdit?.dp?.toString() ?: "0") }
     var catatan by remember { mutableStateOf(rentalToEdit?.catatan ?: "") }
 
@@ -130,6 +139,27 @@ fun SewaBaruBottomSheet(
     val sisaLong = if (totalLong > dpLong) totalLong - dpLong else 0L
 
     val scrollState = rememberScrollState()
+
+    // Filter Saran Nama Penyewa (Maksimal 5 Unik)
+    val namaSuggestions = remember(namaPenyewa, customerList, showNamaSuggestions) {
+        if (showNamaSuggestions && namaPenyewa.trim().isNotEmpty()) {
+            customerList
+                .filter { it.nama.contains(namaPenyewa, ignoreCase = true) }
+                .distinctBy { normalizeNoWa(it.noWa) }
+                .take(5)
+        } else emptyList()
+    }
+
+    // Filter Saran Nomor WA Penyewa (Maksimal 5 Unik)
+    val waSuggestions = remember(noWa, customerList, showWaSuggestions) {
+        if (showWaSuggestions && noWa.trim().isNotEmpty()) {
+            val normInput = normalizeNoWa(noWa)
+            customerList
+                .filter { normalizeNoWa(it.noWa).contains(normInput) || it.noWa.contains(noWa) }
+                .distinctBy { normalizeNoWa(it.noWa) }
+                .take(5)
+        } else emptyList()
+    }
 
     // 1. Tampilkan Nota Transaksi jika transaksi selesai
     if (createdRentalForNota != null) {
@@ -316,43 +346,117 @@ fun SewaBaruBottomSheet(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Nama Penyewa
-            OutlinedTextField(
-                value = namaPenyewa,
-                onValueChange = {
-                    namaPenyewa = it
-                    viewModel.resetUiState()
-                },
-                label = { Text(stringResource(R.string.label_tenant_name)) },
-                singleLine = true,
-                modifier = Modifier.fillMaxWidth(),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = AccentGold, unfocusedBorderColor = DarkSurfaceVariant,
-                    focusedLabelColor = AccentGold, unfocusedLabelColor = TextSecondary,
-                    focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary
+            // Nama Penyewa dengan Saran Otomatis
+            Column(modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(
+                    value = namaPenyewa,
+                    onValueChange = {
+                        namaPenyewa = it
+                        showNamaSuggestions = true
+                        showWaSuggestions = false
+                        viewModel.resetUiState()
+                    },
+                    label = { Text(stringResource(R.string.label_tenant_name)) },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = AccentGold, unfocusedBorderColor = DarkSurfaceVariant,
+                        focusedLabelColor = AccentGold, unfocusedLabelColor = TextSecondary,
+                        focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary
+                    )
                 )
-            )
+
+                // Kartu Daftar Saran Nama
+                if (namaSuggestions.isNotEmpty()) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = CardDefaults.cardColors(containerColor = DarkSurfaceVariant)
+                    ) {
+                        Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                            namaSuggestions.forEach { customer ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            namaPenyewa = customer.nama
+                                            noWa = customer.noWa
+                                            showNamaSuggestions = false
+                                        }
+                                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Filled.Person, contentDescription = "User", tint = AccentGold, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(customer.nama, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("(${customer.noWa})", color = TextSecondary, fontSize = 12.sp)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Nomor WA
-            OutlinedTextField(
-                value = noWa,
-                onValueChange = {
-                    noWa = it
-                    viewModel.resetUiState()
-                },
-                label = { Text(stringResource(R.string.label_tenant_phone)) },
-                placeholder = { Text("08123456789") },
-                singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                modifier = Modifier.fillMaxWidth(),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = AccentGold, unfocusedBorderColor = DarkSurfaceVariant,
-                    focusedLabelColor = AccentGold, unfocusedLabelColor = TextSecondary,
-                    focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary
+            // Nomor WA Penyewa dengan Saran Otomatis
+            Column(modifier = Modifier.fillMaxWidth()) {
+                OutlinedTextField(
+                    value = noWa,
+                    onValueChange = { input ->
+                        noWa = input.filter { it.isDigit() || it == '+' }
+                        showWaSuggestions = true
+                        showNamaSuggestions = false
+                        viewModel.resetUiState()
+                    },
+                    label = { Text(stringResource(R.string.label_tenant_phone)) },
+                    placeholder = { Text("08123456789") },
+                    singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = AccentGold, unfocusedBorderColor = DarkSurfaceVariant,
+                        focusedLabelColor = AccentGold, unfocusedLabelColor = TextSecondary,
+                        focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary
+                    )
                 )
-            )
+
+                // Kartu Daftar Saran Nomor WA
+                if (waSuggestions.isNotEmpty()) {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(top = 4.dp),
+                        shape = RoundedCornerShape(8.dp),
+                        colors = CardDefaults.cardColors(containerColor = DarkSurfaceVariant)
+                    ) {
+                        Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                            waSuggestions.forEach { customer ->
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .clickable {
+                                            namaPenyewa = customer.nama
+                                            noWa = customer.noWa
+                                            showWaSuggestions = false
+                                        }
+                                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Icon(Icons.Filled.Person, contentDescription = "User", tint = AccentGold, modifier = Modifier.size(18.dp))
+                                    Spacer(modifier = Modifier.width(8.dp))
+                                    Text(customer.noWa, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
+                                    Spacer(modifier = Modifier.width(6.dp))
+                                    Text("(${customer.nama})", color = TextSecondary, fontSize = 12.sp)
+                                }
+                            }
+                        }
+                    }
+                }
+            }
 
             Spacer(modifier = Modifier.height(12.dp))
 
@@ -458,12 +562,13 @@ fun SewaBaruBottomSheet(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Total Biaya & DP
+            // Total Biaya & DP dengan Format Rp
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
-                    value = hargaTotalText,
+                    value = formatRupiah(totalLong),
                     onValueChange = { input ->
-                        hargaTotalText = input.filter { it.isDigit() }
+                        val filtered = input.filter { it.isDigit() }
+                        hargaTotalText = filtered
                         viewModel.resetUiState()
                     },
                     label = { Text(stringResource(R.string.label_total_price)) },
@@ -474,9 +579,10 @@ fun SewaBaruBottomSheet(
                 )
 
                 OutlinedTextField(
-                    value = dpText,
+                    value = formatRupiah(dpLong),
                     onValueChange = { input ->
-                        dpText = input.filter { it.isDigit() }
+                        val filtered = input.filter { it.isDigit() }
+                        dpText = filtered
                         viewModel.resetUiState()
                     },
                     label = { Text(stringResource(R.string.label_dp)) },
@@ -489,7 +595,7 @@ fun SewaBaruBottomSheet(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Sisa Pembayaran (Auto)
+            // Sisa Pembayaran (Auto Format Rp)
             OutlinedTextField(
                 value = formatRupiah(sisaLong),
                 onValueChange = {},

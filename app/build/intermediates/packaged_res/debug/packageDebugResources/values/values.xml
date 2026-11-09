@@ -119,6 +119,7 @@
     <string name="metode_qris">QRIS</string>
     <string name="metode_tunai">Tunai (Cash)</string>
     <string name="nav_catalog">Katalog</string>
+    <string name="nav_customer">Penyewa</string>
     <string name="nav_home">Beranda</string>
     <string name="nav_rent">Sewa</string>
     <string name="nav_report">Laporan</string>

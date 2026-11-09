@@ -6,13 +6,14 @@ import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import com.myrent.app.ui.screens.CatalogScreen
+import com.myrent.app.ui.screens.CustomerScreen
 import com.myrent.app.ui.screens.HomeScreen
 import com.myrent.app.ui.screens.RentalScreen
 import com.myrent.app.ui.screens.ReportScreen
 import com.myrent.app.ui.screens.SettingsScreen
 
 /**
- * Mengatur grafik navigasi (NavGraph) 4 menu utama aplikasi dan Layar Pengaturan
+ * Mengatur grafik navigasi (NavGraph) 5 menu utama aplikasi dan Layar Pengaturan
  */
 @Composable
 fun AppNavGraph(
@@ -37,6 +38,9 @@ fun AppNavGraph(
         }
         composable(Screen.Catalog.route) {
             CatalogScreen()
+        }
+        composable(Screen.Customer.route) {
+            CustomerScreen()
         }
         composable(Screen.Report.route) {
             ReportScreen()

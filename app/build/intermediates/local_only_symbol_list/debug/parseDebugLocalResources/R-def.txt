@@ -122,6 +122,7 @@ string menu_manage_category
 string metode_qris
 string metode_tunai
 string nav_catalog
+string nav_customer
 string nav_home
 string nav_rent
 string nav_report

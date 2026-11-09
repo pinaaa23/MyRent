@@ -7,6 +7,9 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.myrent.app.data.auth.AuthRepository
 import com.myrent.app.data.cabang.CabangRepository
+import com.myrent.app.data.customer.Customer
+import com.myrent.app.data.customer.CustomerRepository
+import com.myrent.app.data.customer.normalizeNoWa
 import com.myrent.app.data.items.Item
 import com.myrent.app.data.items.ItemRepository
 import com.myrent.app.data.rentals.Rental
@@ -31,13 +34,14 @@ sealed class RentalUiState {
 }
 
 /**
- * ViewModel untuk mengelola Transaksi Sewa, Pembayaran QRIS/Tunai, Pelunasan, dan Nota
+ * ViewModel untuk mengelola Transaksi Sewa, Pembayaran QRIS/Tunai, Pelunasan, Nota, dan Daftar Customer
  */
 class RentalViewModel(
     private val authRepository: AuthRepository = AuthRepository(),
     private val rentalRepository: RentalRepository = RentalRepository(),
     private val itemRepository: ItemRepository = ItemRepository(),
-    private val cabangRepository: CabangRepository = CabangRepository()
+    private val cabangRepository: CabangRepository = CabangRepository(),
+    private val customerRepository: CustomerRepository = CustomerRepository()
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<RentalUiState>(RentalUiState.Idle)
@@ -67,6 +71,9 @@ class RentalViewModel(
     private val _allRentals = MutableStateFlow<List<Rental>>(emptyList())
     private val _availableItems = MutableStateFlow<List<Item>>(emptyList())
     val availableItems: StateFlow<List<Item>> = _availableItems.asStateFlow()
+
+    private val _customerList = MutableStateFlow<List<Customer>>(emptyList())
+    val customerList: StateFlow<List<Customer>> = _customerList.asStateFlow()
 
     val filteredRentals: StateFlow<List<Rental>> = combine(
         _allRentals,
@@ -126,6 +133,11 @@ class RentalViewModel(
                     launch {
                         itemRepository.getItemsFlow(cabangId).collect { list ->
                             _availableItems.value = list.filter { it.stokTersedia > 0 && it.status != "perbaikan" }
+                        }
+                    }
+                    launch {
+                        customerRepository.getCustomersFlow(cabangId).collect { list ->
+                            _customerList.value = list.distinctBy { normalizeNoWa(it.noWa) }
                         }
                     }
                 }

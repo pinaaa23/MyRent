@@ -27,6 +27,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.myrent.app.ui.theme.DarkSurface
@@ -36,13 +37,7 @@ import com.myrent.app.ui.theme.TextSecondary
 
 /**
  * Navigation Bar Custom (bukan NavigationBar bawaan)
- * Sesuai referensi nav-bar.jpg versi sederhana:
- * - Bar rata dengan sudut atas membulat (tanpa notch)
- * - 4 menu berurutan: Beranda, Sewa, Katalog, Laporan
- * - Menu aktif: lingkaran abu (#2F2F2F) di belakang ikon, ikon & label putih gading (#F2EFE8), label tebal (Bold)
- * - Menu tidak aktif: ikon & label abu (#A8A8A8)
- * - Animasi perpindahan halus dan singkat (maksimal 200 ms)
- * - Area sentuh minimal 48dp, ukuran label minimal 12sp
+ * 5 Menu Utama: Beranda, Sewa, Katalog, Penyewa, Laporan
  */
 @Composable
 fun CustomBottomNavigation(
@@ -54,6 +49,7 @@ fun CustomBottomNavigation(
         Screen.Home,
         Screen.Rental,
         Screen.Catalog,
+        Screen.Customer,
         Screen.Report
     )
 
@@ -74,21 +70,18 @@ fun CustomBottomNavigation(
             items.forEach { screen ->
                 val isSelected = currentRoute == screen.route
 
-                // Animasi transisi warna lingkaran latar ikon (durasi 200ms)
                 val circleBgColor by animateColorAsState(
                     targetValue = if (isSelected) NavActiveCircle else Color.Transparent,
                     animationSpec = tween(durationMillis = 200),
                     label = "circleBgColor"
                 )
 
-                // Animasi transisi warna ikon (durasi 200ms)
                 val iconColor by animateColorAsState(
                     targetValue = if (isSelected) TextPrimary else TextSecondary,
                     animationSpec = tween(durationMillis = 200),
                     label = "iconColor"
                 )
 
-                // Animasi transisi warna label teks (durasi 200ms)
                 val textColor by animateColorAsState(
                     targetValue = if (isSelected) TextPrimary else TextSecondary,
                     animationSpec = tween(durationMillis = 200),
@@ -107,10 +100,9 @@ fun CustomBottomNavigation(
                     horizontalAlignment = Alignment.CenterHorizontally,
                     verticalArrangement = Arrangement.Center
                 ) {
-                    // Indikator lingkaran abu di belakang ikon saat aktif
                     Box(
                         modifier = Modifier
-                            .size(38.dp)
+                            .size(36.dp)
                             .clip(CircleShape)
                             .background(circleBgColor),
                         contentAlignment = Alignment.Center
@@ -120,19 +112,20 @@ fun CustomBottomNavigation(
                                 imageVector = iconVector,
                                 contentDescription = stringResource(id = screen.titleResId),
                                 tint = iconColor,
-                                modifier = Modifier.size(22.dp)
+                                modifier = Modifier.size(20.dp)
                             )
                         }
                     }
 
                     Spacer(modifier = Modifier.height(2.dp))
 
-                    // Teks label menu
                     Text(
                         text = stringResource(id = screen.titleResId),
-                        fontSize = 12.sp,
+                        fontSize = 11.sp,
                         fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                        color = textColor
+                        color = textColor,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis
                     )
                 }
             }

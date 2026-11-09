@@ -1,6 +1,8 @@
 package com.myrent.app.data.rentals
 
 import com.google.firebase.firestore.FirebaseFirestore
+import com.myrent.app.data.customer.CustomerRepository
+import com.myrent.app.data.customer.normalizeNoWa
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.callbackFlow
@@ -10,7 +12,8 @@ import kotlinx.coroutines.tasks.await
  * Repository pengelola koleksi "rentals" di Firestore
  */
 class RentalRepository(
-    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
+    private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
+    private val customerRepository: CustomerRepository = CustomerRepository()
 ) {
     fun getRentalsFlow(cabangId: String): Flow<List<Rental>> = callbackFlow {
         if (cabangId.isEmpty()) {
@@ -62,14 +65,28 @@ class RentalRepository(
         awaitClose { listener.remove() }
     }
 
+    /**
+     * Tambah sewa baru:
+     * 1. Simpan/perbarui data pelanggan ke "customers"
+     * 2. Simpan dokumen ke "rentals"
+     * 3. Kurangi stokTersedia barang di "items"
+     */
     suspend fun tambahSewa(rental: Rental, itemId: String): Result<Rental> = runCatching {
+        val noWaNorm = normalizeNoWa(rental.noWa)
+        val customerRes = customerRepository.upsertCustomer(
+            cabangId = rental.cabangId,
+            nama = rental.namaPenyewa,
+            noWaRaw = rental.noWa
+        )
+        val customerId = customerRes.getOrNull()?.id ?: "${rental.cabangId}_${noWaNorm}"
+
         val map = mapOf(
             "cabangId" to rental.cabangId,
             "itemId" to itemId,
             "namaBarang" to rental.namaBarang,
-            "customerId" to rental.customerId,
-            "namaPenyewa" to rental.namaPenyewa,
-            "noWa" to rental.noWa,
+            "customerId" to customerId,
+            "namaPenyewa" to rental.namaPenyewa.trim(),
+            "noWa" to noWaNorm,
             "tanggalMulai" to rental.tanggalMulai,
             "tanggalKembali" to rental.tanggalKembali,
             "lamaHari" to rental.lamaHari,
@@ -106,15 +123,7 @@ class RentalRepository(
             ).await()
         }
 
-        val customerMap = mapOf(
-            "cabangId" to rental.cabangId,
-            "nama" to rental.namaPenyewa,
-            "noWa" to rental.noWa,
-            "dibuatPada" to System.currentTimeMillis()
-        )
-        firestore.collection("customers").add(customerMap).await()
-
-        rental.copy(id = docRef.id)
+        rental.copy(id = docRef.id, customerId = customerId, noWa = noWaNorm)
     }
 
     suspend fun tandaiDikembalikan(rental: Rental): Result<Unit> = runCatching {
@@ -144,9 +153,14 @@ class RentalRepository(
     }
 
     suspend fun updateSewa(rental: Rental): Result<Unit> = runCatching {
+        val noWaNorm = normalizeNoWa(rental.noWa)
+        if (rental.cabangId.isNotEmpty() && rental.namaPenyewa.isNotEmpty()) {
+            customerRepository.upsertCustomer(rental.cabangId, rental.namaPenyewa, rental.noWa)
+        }
+
         val map = mapOf(
-            "namaPenyewa" to rental.namaPenyewa,
-            "noWa" to rental.noWa,
+            "namaPenyewa" to rental.namaPenyewa.trim(),
+            "noWa" to noWaNorm,
             "tanggalMulai" to rental.tanggalMulai,
             "tanggalKembali" to rental.tanggalKembali,
             "lamaHari" to rental.lamaHari,
