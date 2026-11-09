@@ -7,7 +7,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.FirebaseFirestore
 import com.myrent.app.data.auth.AuthRepository
-import com.myrent.app.data.cabang.CabangRepository
 import com.myrent.app.data.rentals.Rental
 import com.myrent.app.data.rentals.RentalRepository
 import com.myrent.app.ui.screens.formatDate
@@ -15,7 +14,7 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
-import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.tasks.await
@@ -32,35 +31,28 @@ data class FollowUpItem(
  */
 class HomeViewModel(
     private val authRepository: AuthRepository = AuthRepository(),
-    private val cabangRepository: CabangRepository = CabangRepository(),
     private val rentalRepository: RentalRepository = RentalRepository(),
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) : ViewModel() {
 
-    private val _userCabangNama = MutableStateFlow("")
-    val userCabangNama: StateFlow<String> = _userCabangNama.asStateFlow()
-
-    private val _userCabangId = MutableStateFlow("")
+    private val _userNamaToko = MutableStateFlow("")
+    val userNamaToko: StateFlow<String> = _userNamaToko.asStateFlow()
 
     private val _allRentals = MutableStateFlow<List<Rental>>(emptyList())
 
-    // Metric 1: Jumlah Sewa Berjalan
-    val sewaBerjalanCount: StateFlow<Int> = combine(_allRentals) { rentals ->
-        rentals[0].filter { it.status == "berjalan" }.size
+    val sewaBerjalanCount: StateFlow<Int> = _allRentals.map { rentals ->
+        rentals.filter { it.status == "berjalan" }.size
     }.stateIn(viewModelScope, SharingStarted.Lazily, 0)
 
-    // Metric 2: Jatuh Tempo Hari Ini
-    val jatuhTempoHariIniCount: StateFlow<Int> = combine(_allRentals) { rentals ->
-        rentals[0].filter { it.status == "berjalan" && isSameDay(it.tanggalKembali, System.currentTimeMillis()) }.size
+    val jatuhTempoHariIniCount: StateFlow<Int> = _allRentals.map { rentals ->
+        rentals.filter { it.status == "berjalan" && isSameDay(it.tanggalKembali, System.currentTimeMillis()) }.size
     }.stateIn(viewModelScope, SharingStarted.Lazily, 0)
 
-    // Metric 3: Omzet Hari Ini (Uang Masuk Riil Hari Ini: DP Sewa Hari Ini + Pelunasan Hari Ini)
-    val omzetHariIni: StateFlow<Long> = combine(_allRentals) { rentals ->
+    val omzetHariIni: StateFlow<Long> = _allRentals.map { rentals ->
         val todayMs = System.currentTimeMillis()
         var uangMasukRiil = 0L
 
-        rentals[0].forEach { rental ->
-            // 1. Uang DP / Lunas awal dari sewa yang dibuat hari ini
+        rentals.forEach { rental ->
             if (isSameDay(rental.dibuatPada, todayMs)) {
                 val dpAwal = if (rental.pelunasanPada != null && isSameDay(rental.pelunasanPada, todayMs)) {
                     rental.hargaTotal - rental.jumlahPelunasan
@@ -70,7 +62,6 @@ class HomeViewModel(
                 uangMasukRiil += dpAwal
             }
 
-            // 2. Uang Pelunasan sisa bayar yang dilakukan hari ini
             if (rental.pelunasanPada != null && isSameDay(rental.pelunasanPada, todayMs)) {
                 uangMasukRiil += rental.jumlahPelunasan
             }
@@ -78,13 +69,12 @@ class HomeViewModel(
         uangMasukRiil
     }.stateIn(viewModelScope, SharingStarted.Lazily, 0L)
 
-    // Daftar Perlu di-Follow Up (H-1 & Hari H)
-    val followUpList: StateFlow<List<FollowUpItem>> = combine(_allRentals) { rentals ->
+    val followUpList: StateFlow<List<FollowUpItem>> = _allRentals.map { rentals ->
         val list = mutableListOf<FollowUpItem>()
         val todayMs = System.currentTimeMillis()
         val tomorrowMs = todayMs + (24 * 60 * 60 * 1000L)
 
-        rentals[0].filter { it.status == "berjalan" }.forEach { rental ->
+        rentals.filter { it.status == "berjalan" }.forEach { rental ->
             if (isSameDay(rental.tanggalKembali, todayMs)) {
                 list.add(FollowUpItem(rental, "Hari H", rental.sudahFollowUpH))
             } else if (isSameDay(rental.tanggalKembali, tomorrowMs)) {
@@ -100,17 +90,15 @@ class HomeViewModel(
 
     private fun loadData() {
         viewModelScope.launch {
-            val profileRes = authRepository.getUserProfile()
-            profileRes.onSuccess { userDoc ->
-                val cabangId = userDoc.cabangId
-                _userCabangId.value = cabangId
-                if (cabangId.isNotEmpty()) {
-                    val cabangRes = cabangRepository.getCabangById(cabangId)
-                    cabangRes.onSuccess { c -> _userCabangNama.value = c.nama }
+            launch {
+                authRepository.getUserProfileFlow().collect { userDoc ->
+                    _userNamaToko.value = userDoc.namaToko.ifEmpty { "Kusuma Rent" }
+                }
+            }
 
-                    rentalRepository.getRentalsFlow(cabangId).collect { rentals ->
-                        _allRentals.value = rentals
-                    }
+            launch {
+                rentalRepository.getRentalsFlow().collect { rentals ->
+                    _allRentals.value = rentals
                 }
             }
         }
@@ -132,7 +120,10 @@ class HomeViewModel(
 
         viewModelScope.launch {
             val fieldToUpdate = if (item.type == "H-1") "sudahFollowUpH1" else "sudahFollowUpH"
-            firestore.collection("rentals").document(rental.id).update(fieldToUpdate, true).await()
+            val uid = authRepository.currentUser?.uid ?: ""
+            if (uid.isNotEmpty()) {
+                firestore.collection("toko").document(uid).collection("rentals").document(rental.id).update(fieldToUpdate, true).await()
+            }
         }
 
         try {

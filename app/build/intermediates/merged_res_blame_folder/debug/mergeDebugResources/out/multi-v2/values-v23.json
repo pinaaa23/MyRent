@@ -4,7 +4,7 @@
             "outputFile": "com.myrent.app-mergeDebugResources-73:/values-v23/values-v23.xml",
             "map": [
                 {
-                    "source": "C:\\Users\\LENOVO\\.gradle\\caches\\8.12\\transforms\\da683ff2d6340eb812871c9fe9a4d2d7\\transformed\\work-runtime-2.10.0\\res\\values-v23\\values-v23.xml",
+                    "source": "C:\\Users\\LENOVO\\.gradle\\caches\\8.12\\transforms\\7d8dbc07974df6b148a5b6962588d864\\transformed\\work-runtime-2.10.0\\res\\values-v23\\values-v23.xml",
                     "from": {
                         "startLines": "2,3",
                         "startColumns": "4,4",

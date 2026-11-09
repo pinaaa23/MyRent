@@ -267,7 +267,6 @@ string android_credentials_TYPE_PASSWORD_CREDENTIAL
 string androidx_credentials_TYPE_PUBLIC_KEY_CREDENTIAL
 string androidx_startup
 string app_name
-string btn_add_branch
 string btn_add_category
 string btn_add_item
 string btn_back_to_dashboard
@@ -339,7 +338,6 @@ string dropdown_menu
 string email_not_verified
 string email_sent_success
 string empty_available_items_warning
-string empty_cabang_warning
 string empty_followup_desc
 string empty_followup_title
 string empty_items_desc
@@ -360,7 +358,6 @@ string error_item_stock_invalid
 string error_no_network
 string error_password_mismatch
 string error_quantity_exceeds_stock
-string error_select_cabang
 string error_short_password
 string error_too_many_requests
 string error_unknown
@@ -381,9 +378,6 @@ string google_storage_bucket
 string in_progress
 string indeterminate
 string label_branch
-string label_branch_address
-string label_branch_name
-string label_branch_phone
 string label_category_name
 string label_confirm_password
 string label_dp
@@ -399,20 +393,20 @@ string label_item_size
 string label_item_status
 string label_item_stock
 string label_notes_guarantee
+string label_owner_name
 string label_password
 string label_payment_status
 string label_remaining_payment
 string label_rental_quantity
-string label_select_cabang
 string label_select_item
 string label_start_date
+string label_store_name
 string label_tenant_name
 string label_tenant_phone
 string label_total_price
 string link_forgot_password
 string link_login
 string link_register
-string loading_cabang
 string m3c_bottom_sheet_collapse_description
 string m3c_bottom_sheet_dismiss_description
 string m3c_bottom_sheet_drag_handle_description
@@ -470,7 +464,6 @@ string m3c_time_picker_period_toggle_description
 string m3c_time_picker_pm
 string m3c_tooltip_long_press_label
 string m3c_tooltip_pane_description
-string menu_manage_branch
 string menu_manage_category
 string metode_qris
 string metode_tunai
@@ -483,6 +476,7 @@ string navigation_menu
 string not_selected
 string placeholder_email
 string placeholder_search_rental
+string placeholder_store_name
 string project_id
 string qr_code_desc
 string range_end
@@ -512,17 +506,14 @@ string tag_due_tomorrow
 string template_percent
 string text_already_have_account
 string text_dont_have_account
-string title_add_branch
 string title_add_category
 string title_add_item
 string title_add_rental
 string title_catalog
-string title_edit_branch
 string title_edit_category
 string title_edit_item
 string title_forgot_password
 string title_login
-string title_manage_branch
 string title_manage_category
 string title_need_follow_up
 string title_payment_method
@@ -565,5 +556,6 @@ styleable NavHost navGraph
 styleable NavInclude graph
 styleable Navigator android_label android_id route
 styleable SignInButton buttonSize colorScheme scopeUris
+xml file_paths
 xml ga_ad_services_config
 xml image_share_filepaths

@@ -17,8 +17,10 @@
     <string name="label_email">Email</string>
     <string name="label_password">Kata Sandi</string>
     <string name="label_confirm_password">Ulangi Kata Sandi</string>
-    <string name="label_full_name">Nama Lengkap</string>
-    <string name="label_select_cabang">Pilih Cabang</string>
+    <string name="label_full_name">Nama Lengkap Pemilik</string>
+    <string name="label_owner_name">Nama Pemilik</string>
+    <string name="label_store_name">Nama Toko / Cabang</string>
+    <string name="placeholder_store_name">misal: Suka Jaya Rent</string>
     <string name="placeholder_email">nama@email.com</string>
 
     <!-- Auth - Login -->
@@ -26,15 +28,13 @@
     <string name="btn_login">Masuk</string>
     <string name="link_forgot_password">Lupa kata sandi?</string>
     <string name="text_dont_have_account">Belum punya akun? </string>
-    <string name="link_register">Daftar</string>
+    <string name="link_register">Daftar Akun Toko Baru</string>
 
     <!-- Auth - Register -->
-    <string name="title_register">Buat Akun Baru</string>
-    <string name="btn_register">Daftar</string>
+    <string name="title_register">Pendaftaran Toko Baru</string>
+    <string name="btn_register">Daftar Toko</string>
     <string name="text_already_have_account">Sudah punya akun? </string>
     <string name="link_login">Masuk</string>
-    <string name="empty_cabang_warning">Belum ada cabang terdaftar di database.</string>
-    <string name="loading_cabang">Memuat daftar cabang…</string>
 
     <!-- Auth - Verify Email -->
     <string name="title_verify_email">Cek Email Kamu</string>
@@ -58,7 +58,6 @@
     <string name="error_invalid_email">Format email tidak valid.</string>
     <string name="error_short_password">Kata sandi minimal 6 karakter.</string>
     <string name="error_password_mismatch">Kata sandi dan konfirmasi kata sandi tidak sama.</string>
-    <string name="error_select_cabang">Silakan pilih cabang terlebih dahulu.</string>
 
     <!-- Firebase Friendly Errors -->
     <string name="error_email_already_used">Email ini sudah terdaftar. Silakan gunakan email lain atau masuk.</string>
@@ -72,7 +71,7 @@
     <string name="filter_all">Semua</string>
     <string name="btn_add_item">+ Tambah Barang</string>
     <string name="empty_items_title">Belum Ada Barang</string>
-    <string name="empty_items_desc">Belum ada barang di cabang ini. Ketuk + Tambah Barang untuk memulai.</string>
+    <string name="empty_items_desc">Belum ada barang di toko ini. Ketuk + Tambah Barang untuk memulai.</string>
     <string name="status_available">Tersedia</string>
     <string name="status_rented">Disewa</string>
     <string name="status_maintenance">Perbaikan</string>
@@ -104,22 +103,12 @@
     <!-- Pengaturan -->
     <string name="title_settings">Pengaturan</string>
     <string name="section_profile">Profil Akun</string>
-    <string name="label_branch">Cabang Tempat Tugas</string>
-    <string name="menu_manage_branch">Kelola Cabang</string>
+    <string name="label_branch">Toko / Cabang</string>
     <string name="menu_manage_category">Kelola Kategori</string>
     <string name="confirm_logout_title">Keluar Akun?</string>
     <string name="confirm_logout_msg">Apakah Anda yakin ingin keluar dari akun MyRent?</string>
     <string name="btn_cancel">Batal</string>
     <string name="btn_confirm">Ya, Keluar</string>
-
-    <!-- Kelola Cabang -->
-    <string name="title_manage_branch">Kelola Cabang</string>
-    <string name="btn_add_branch">Tambah Cabang Baru</string>
-    <string name="title_add_branch">Tambah Cabang</string>
-    <string name="title_edit_branch">Edit Cabang</string>
-    <string name="label_branch_name">Nama Cabang</string>
-    <string name="label_branch_address">Alamat</string>
-    <string name="label_branch_phone">Nomor WhatsApp</string>
 
     <!-- Kelola Kategori -->
     <string name="title_manage_category">Kelola Kategori</string>
@@ -137,7 +126,7 @@
     <string name="placeholder_search_rental">Cari nama penyewa atau No WA...</string>
     <string name="btn_new_rental">+ Sewa Baru</string>
     <string name="empty_rentals_title">Belum Ada Transaksi Sewa</string>
-    <string name="empty_rentals_desc">Belum ada sewa tercatat di cabang ini. Ketuk + Sewa Baru untuk mencatat sewa.</string>
+    <string name="empty_rentals_desc">Belum ada sewa tercatat di toko ini. Ketuk + Sewa Baru untuk mencatat sewa.</string>
     <string name="filter_active">Berjalan</string>
     <string name="filter_due_soon">Hampir Jatuh Tempo</string>
     <string name="filter_overdue">Terlambat</string>
@@ -163,7 +152,7 @@
     <string name="metode_qris">QRIS</string>
     <string name="qr_code_desc">Silakan tunjukkan QRIS di atas kepada konsumen</string>
     <string name="btn_confirm_payment">Konfirmasi Pembayaran</string>
-    <string name="empty_available_items_warning">Tidak ada barang berstatus Tersedia di cabang ini.</string>
+    <string name="empty_available_items_warning">Tidak ada barang berstatus Tersedia di toko ini.</string>
     <string name="error_quantity_exceeds_stock">Jumlah disewa (%1$d) melebihi stok yang tersedia (%2$d).</string>
     <string name="error_dp_exceeds_total">Uang Muka / DP tidak boleh melebihi Total Biaya Sewa.</string>
 

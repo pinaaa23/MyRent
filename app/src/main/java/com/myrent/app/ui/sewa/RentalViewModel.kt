@@ -6,7 +6,7 @@ import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.myrent.app.data.auth.AuthRepository
-import com.myrent.app.data.cabang.CabangRepository
+import com.myrent.app.data.auth.UserDoc
 import com.myrent.app.data.customer.Customer
 import com.myrent.app.data.customer.CustomerRepository
 import com.myrent.app.data.customer.normalizeNoWa
@@ -14,6 +14,10 @@ import com.myrent.app.data.items.Item
 import com.myrent.app.data.items.ItemRepository
 import com.myrent.app.data.rentals.Rental
 import com.myrent.app.data.rentals.RentalRepository
+import com.myrent.app.data.settings.DefaultStoreConfig
+import com.myrent.app.data.settings.StoreConfigDoc
+import com.myrent.app.data.settings.StoreConfigRepository
+import com.myrent.app.data.settings.TemplateReplacer
 import com.myrent.app.ui.screens.formatDate
 import com.myrent.app.ui.screens.formatRupiah
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -40,27 +44,18 @@ class RentalViewModel(
     private val authRepository: AuthRepository = AuthRepository(),
     private val rentalRepository: RentalRepository = RentalRepository(),
     private val itemRepository: ItemRepository = ItemRepository(),
-    private val cabangRepository: CabangRepository = CabangRepository(),
-    private val customerRepository: CustomerRepository = CustomerRepository()
+    private val customerRepository: CustomerRepository = CustomerRepository(),
+    private val storeConfigRepository: StoreConfigRepository = StoreConfigRepository()
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<RentalUiState>(RentalUiState.Idle)
     val uiState: StateFlow<RentalUiState> = _uiState.asStateFlow()
 
-    private val _userCabangId = MutableStateFlow("")
-    val userCabangId: StateFlow<String> = _userCabangId.asStateFlow()
-
     private val _kasirNama = MutableStateFlow("")
     val kasirNama: StateFlow<String> = _kasirNama.asStateFlow()
 
-    private val _cabangNama = MutableStateFlow("")
-    val cabangNama: StateFlow<String> = _cabangNama.asStateFlow()
-
-    private val _cabangAlamat = MutableStateFlow("")
-    val cabangAlamat: StateFlow<String> = _cabangAlamat.asStateFlow()
-
-    private val _cabangNoWa = MutableStateFlow("")
-    val cabangNoWa: StateFlow<String> = _cabangNoWa.asStateFlow()
+    private val _userDocState = MutableStateFlow(UserDoc())
+    val userDocState: StateFlow<UserDoc> = _userDocState.asStateFlow()
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
@@ -74,6 +69,9 @@ class RentalViewModel(
 
     private val _customerList = MutableStateFlow<List<Customer>>(emptyList())
     val customerList: StateFlow<List<Customer>> = _customerList.asStateFlow()
+
+    val storeConfig: StateFlow<StoreConfigDoc> = storeConfigRepository.getStoreConfigFlow()
+        .stateIn(viewModelScope, SharingStarted.Lazily, StoreConfigDoc())
 
     val filteredRentals: StateFlow<List<Rental>> = combine(
         _allRentals,
@@ -106,40 +104,30 @@ class RentalViewModel(
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     init {
-        loadCabangAndData()
+        loadData()
     }
 
-    private fun loadCabangAndData() {
+    private fun loadData() {
         viewModelScope.launch {
             val profileRes = authRepository.getUserProfile()
             profileRes.onSuccess { userDoc ->
-                val cabangId = userDoc.cabangId
-                _userCabangId.value = cabangId
+                _userDocState.value = userDoc
                 _kasirNama.value = userDoc.nama
+            }
 
-                if (cabangId.isNotEmpty()) {
-                    val cRes = cabangRepository.getCabangById(cabangId)
-                    cRes.onSuccess { c ->
-                        _cabangNama.value = c.nama
-                        _cabangAlamat.value = c.alamat
-                        _cabangNoWa.value = c.noWa
-                    }
-
-                    launch {
-                        rentalRepository.getRentalsFlow(cabangId).collect { list ->
-                            _allRentals.value = list
-                        }
-                    }
-                    launch {
-                        itemRepository.getItemsFlow(cabangId).collect { list ->
-                            _availableItems.value = list.filter { it.stokTersedia > 0 && it.status != "perbaikan" }
-                        }
-                    }
-                    launch {
-                        customerRepository.getCustomersFlow(cabangId).collect { list ->
-                            _customerList.value = list.distinctBy { normalizeNoWa(it.noWa) }
-                        }
-                    }
+            launch {
+                rentalRepository.getRentalsFlow().collect { list ->
+                    _allRentals.value = list
+                }
+            }
+            launch {
+                itemRepository.getItemsFlow().collect { list ->
+                    _availableItems.value = list.filter { it.stokTersedia > 0 && it.status != "perbaikan" }
+                }
+            }
+            launch {
+                customerRepository.getCustomersFlow().collect { list ->
+                    _customerList.value = list.distinctBy { normalizeNoWa(it.noWa) }
                 }
             }
         }
@@ -203,7 +191,6 @@ class RentalViewModel(
             val generatedInvoiceId = "INV-${sdfId.format(Date(now))}"
 
             val rental = Rental(
-                cabangId = _userCabangId.value,
                 itemId = selectedItem.id,
                 namaBarang = selectedItem.nama,
                 namaPenyewa = namaPenyewa.trim(),
@@ -335,63 +322,75 @@ class RentalViewModel(
 
     fun kirimWhatsAppNota(
         context: Context,
-        rental: Rental,
-        cabangNama: String
+        rental: Rental
     ) {
-        var formattedNo = rental.noWa.replace("[^0-9]".toRegex(), "")
-        if (formattedNo.startsWith("0")) {
-            formattedNo = "62" + formattedNo.substring(1)
-        }
+        viewModelScope.launch {
+            var formattedNo = rental.noWa.replace("[^0-9]".toRegex(), "")
+            if (formattedNo.startsWith("0")) {
+                formattedNo = "62" + formattedNo.substring(1)
+            }
 
-        val tglTransaksi = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale("id", "ID")).format(Date(rental.dibuatPada))
-        val tglMulai = formatDate(rental.tanggalMulai)
-        val tglKembali = formatDate(rental.tanggalKembali)
-        val sisaFormat = formatRupiah(rental.sisaBayar)
-        val statusLunas = if (rental.sisaBayar == 0L) "LUNAS" else "BELUM LUNAS (Sisa: $sisaFormat)"
+            val userDoc = authRepository.getUserProfile().getOrDefault(UserDoc())
+            val storeConfigDoc = storeConfigRepository.getStoreConfig().getOrDefault(StoreConfigDoc())
 
-        val pesan = """
-            *INVOICE TRANSAKSI SEWA - ${cabangNama.ifEmpty { "MYRENT STORE" }.uppercase()}*
-            ------------------------------------
-            *No. Invoice* : ${rental.invoiceId.ifEmpty { "INV-${rental.dibuatPada}" }}
-            *Waktu*       : $tglTransaksi
-            *Pelanggan*   : ${rental.namaPenyewa} (${rental.noWa})
+            val template = storeConfigDoc.templatePesanNota.ifEmpty { DefaultStoreConfig.TEMPLATE_NOTA_DEFAULT }
+            val tglMulai = formatDate(rental.tanggalMulai)
+            val tglKembali = formatDate(rental.tanggalKembali)
 
-            *RINCIAN SEWA*:
-            • Barang      : ${rental.namaBarang} (${rental.jumlah} unit)
-            • Periode     : $tglMulai s/d $tglKembali (${rental.lamaHari} Hari)
-            • Total Biaya : ${formatRupiah(rental.hargaTotal)}
-            • Uang Muka   : ${formatRupiah(rental.dp)}
-            • Sisa Bayar  : $sisaFormat
-            • Status      : $statusLunas
-            • Metode      : ${rental.metodePembayaran}
-            • Jaminan/Note: ${rental.catatan.ifEmpty { "-" }}
+            val pesan = TemplateReplacer.replaceVariables(
+                template = template,
+                nama = rental.namaPenyewa,
+                barang = "${rental.namaBarang} (${rental.jumlah} unit)",
+                tanggal = "$tglMulai s/d $tglKembali (${rental.lamaHari} Hari)",
+                total = formatRupiah(rental.hargaTotal),
+                dp = formatRupiah(rental.dp),
+                sisa = formatRupiah(rental.sisaBayar),
+                invoice = rental.invoiceId.ifEmpty { "INV-${rental.dibuatPada}" },
+                toko = userDoc.namaToko.ifEmpty { "MYRENT STORE" },
+                catatan = rental.catatan
+            )
 
-            ------------------------------------
-            *Catatan*: Mohon tunjukkan nota / pesan ini saat melakukan pengembalian barang.
-            Terima kasih telah menyewa alat di MyRent!
-        """.trimIndent()
-
-        try {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/$formattedNo?text=${Uri.encode(pesan)}"))
-            context.startActivity(intent)
-        } catch (e: Exception) {
-            _uiState.value = RentalUiState.Error("Gagal membuka WhatsApp. Pastikan WhatsApp terpasang.")
+            try {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/$formattedNo?text=${Uri.encode(pesan)}"))
+                context.startActivity(intent)
+            } catch (e: Exception) {
+                _uiState.value = RentalUiState.Error("Gagal membuka WhatsApp. Pastikan WhatsApp terpasang.")
+            }
         }
     }
 
     fun kirimWhatsApp(context: Context, rental: Rental) {
-        var formattedNo = rental.noWa.replace("[^0-9]".toRegex(), "")
-        if (formattedNo.startsWith("0")) {
-            formattedNo = "62" + formattedNo.substring(1)
-        }
-        val tglStr = formatDate(rental.tanggalKembali)
-        val pesan = "Halo ${rental.namaPenyewa}, kami dari toko MyRent mengingatkan bahwa ${rental.namaBarang} (${rental.jumlah} unit) dijadwalkan dikembalikan pada $tglStr. Terima kasih."
+        viewModelScope.launch {
+            var formattedNo = rental.noWa.replace("[^0-9]".toRegex(), "")
+            if (formattedNo.startsWith("0")) {
+                formattedNo = "62" + formattedNo.substring(1)
+            }
 
-        try {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/$formattedNo?text=${Uri.encode(pesan)}"))
-            context.startActivity(intent)
-        } catch (e: Exception) {
-            _uiState.value = RentalUiState.Error("Gagal membuka WhatsApp. Pastikan WhatsApp terpasang.")
+            val userDoc = authRepository.getUserProfile().getOrDefault(UserDoc())
+            val storeConfigDoc = storeConfigRepository.getStoreConfig().getOrDefault(StoreConfigDoc())
+
+            val template = storeConfigDoc.templatePesanH.ifEmpty { DefaultStoreConfig.TEMPLATE_H_DEFAULT }
+            val tglStr = formatDate(rental.tanggalKembali)
+
+            val pesan = TemplateReplacer.replaceVariables(
+                template = template,
+                nama = rental.namaPenyewa,
+                barang = "${rental.namaBarang} (${rental.jumlah} unit)",
+                tanggal = tglStr,
+                total = formatRupiah(rental.hargaTotal),
+                dp = formatRupiah(rental.dp),
+                sisa = formatRupiah(rental.sisaBayar),
+                invoice = rental.invoiceId,
+                toko = userDoc.namaToko.ifEmpty { "MYRENT STORE" },
+                catatan = rental.catatan
+            )
+
+            try {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/$formattedNo?text=${Uri.encode(pesan)}"))
+                context.startActivity(intent)
+            } catch (e: Exception) {
+                _uiState.value = RentalUiState.Error("Gagal membuka WhatsApp. Pastikan WhatsApp terpasang.")
+            }
         }
     }
 

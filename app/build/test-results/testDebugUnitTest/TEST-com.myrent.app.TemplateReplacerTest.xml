@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<testsuite name="com.myrent.app.TemplateReplacerTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-09T16:15:45" hostname="REFINAKUSUMA" time="0.008">
+  <properties/>
+  <testcase name="testTemplateVariableReplacement" classname="com.myrent.app.TemplateReplacerTest" time="0.006"/>
+  <testcase name="testUnknownVariablesKeptAsIs" classname="com.myrent.app.TemplateReplacerTest" time="0.0"/>
+  <testcase name="testIsValidNoWa" classname="com.myrent.app.TemplateReplacerTest" time="0.002"/>
+  <testcase name="testNormalizeNoWa" classname="com.myrent.app.TemplateReplacerTest" time="0.0"/>
+  <testcase name="testEmptyTemplateHandledGracefully" classname="com.myrent.app.TemplateReplacerTest" time="0.0"/>
+  <system-out><![CDATA[]]></system-out>
+  <system-err><![CDATA[]]></system-err>
+</testsuite>

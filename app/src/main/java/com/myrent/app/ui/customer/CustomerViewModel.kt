@@ -5,7 +5,6 @@ import android.content.Intent
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.myrent.app.data.auth.AuthRepository
 import com.myrent.app.data.customer.Customer
 import com.myrent.app.data.customer.CustomerRepository
 import com.myrent.app.data.customer.normalizeNoWa
@@ -34,10 +33,9 @@ data class CustomerItemUi(
 )
 
 /**
- * ViewModel pengelola Halaman Data Penyewa
+ * ViewModel pengelola Halaman Data Penyewa (Tanpa Filter Cabang)
  */
 class CustomerViewModel(
-    private val authRepository: AuthRepository = AuthRepository(),
     private val customerRepository: CustomerRepository = CustomerRepository(),
     private val rentalRepository: RentalRepository = RentalRepository()
 ) : ViewModel() {
@@ -45,16 +43,12 @@ class CustomerViewModel(
     private val _uiState = MutableStateFlow<CustomerUiState>(CustomerUiState.Idle)
     val uiState: StateFlow<CustomerUiState> = _uiState.asStateFlow()
 
-    private val _userCabangId = MutableStateFlow("")
-    val userCabangId: StateFlow<String> = _userCabangId.asStateFlow()
-
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
 
     private val _allCustomers = MutableStateFlow<List<Customer>>(emptyList())
     private val _allRentals = MutableStateFlow<List<Rental>>(emptyList())
 
-    // List Customer UI gabungan dengan statistik sewa dan pencarian
     val filteredCustomerList: StateFlow<List<CustomerItemUi>> = combine(
         _allCustomers,
         _allRentals,
@@ -62,7 +56,6 @@ class CustomerViewModel(
     ) { customers, rentals, query ->
         val uiList = customers.map { cust ->
             val custNoWaNorm = normalizeNoWa(cust.noWa)
-            // Filter sewa yang dimiliki oleh penyewa ini
             val custRentals = rentals.filter { r ->
                 r.customerId == cust.id || normalizeNoWa(r.noWa) == custNoWaNorm
             }.sortedByDescending { it.dibuatPada }
@@ -93,23 +86,15 @@ class CustomerViewModel(
 
     private fun loadData() {
         viewModelScope.launch {
-            val profileRes = authRepository.getUserProfile()
-            profileRes.onSuccess { userDoc ->
-                val cabangId = userDoc.cabangId
-                _userCabangId.value = cabangId
-                if (cabangId.isNotEmpty()) {
-                    launch {
-                        rentalRepository.getRentalsFlow(cabangId).collect { rentals ->
-                            _allRentals.value = rentals
-                            // Picu migrasi data otomatis jika koleksi customers masih kosong
-                            customerRepository.migrateCustomersFromRentalsIfEmpty(cabangId, rentals)
-                        }
-                    }
-                    launch {
-                        customerRepository.getCustomersFlow(cabangId).collect { customers ->
-                            _allCustomers.value = customers
-                        }
-                    }
+            launch {
+                rentalRepository.getRentalsFlow().collect { rentals ->
+                    _allRentals.value = rentals
+                    customerRepository.migrateCustomersFromRentalsIfEmpty(rentals)
+                }
+            }
+            launch {
+                customerRepository.getCustomersFlow().collect { customers ->
+                    _allCustomers.value = customers
                 }
             }
         }

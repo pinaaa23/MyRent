@@ -97,10 +97,8 @@ fun SewaBaruBottomSheet(
 
     val customerList by viewModel.customerList.collectAsState()
 
+    val userDoc by viewModel.userDocState.collectAsState()
     val kasirNama by viewModel.kasirNama.collectAsState()
-    val cabangNama by viewModel.cabangNama.collectAsState()
-    val cabangAlamat by viewModel.cabangAlamat.collectAsState()
-    val cabangNoWa by viewModel.cabangNoWa.collectAsState()
 
     var namaPenyewa by remember { mutableStateOf(rentalToEdit?.namaPenyewa ?: "") }
     var noWa by remember { mutableStateOf(rentalToEdit?.noWa ?: "") }
@@ -166,9 +164,9 @@ fun SewaBaruBottomSheet(
         NotaTransaksiDialog(
             rental = createdRentalForNota!!,
             kasirNama = kasirNama,
-            cabangNama = cabangNama,
-            cabangAlamat = cabangAlamat,
-            cabangNoWa = cabangNoWa,
+            cabangNama = userDoc.namaToko,
+            cabangAlamat = userDoc.alamatToko,
+            cabangNoWa = userDoc.noWaToko,
             viewModel = viewModel,
             onClose = {
                 createdRentalForNota = null
@@ -186,7 +184,7 @@ fun SewaBaruBottomSheet(
             namaPenyewa = namaPenyewa,
             namaBarang = selectedItem?.nama ?: (rentalToEdit?.namaBarang ?: "Barang Sewa"),
             jumlahUnit = jmlInt,
-            cabangNama = cabangNama,
+            cabangNama = userDoc.namaToko.ifEmpty { "MYRENT STORE" },
             onBack = { showPaymentScreen = false },
             onKonfirmasiPembayaran = { metode ->
                 showPaymentScreen = false

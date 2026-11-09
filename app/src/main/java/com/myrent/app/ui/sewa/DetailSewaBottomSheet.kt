@@ -71,10 +71,8 @@ fun DetailSewaBottomSheet(
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
+    val userDoc by viewModel.userDocState.collectAsState()
     val kasirNama by viewModel.kasirNama.collectAsState()
-    val cabangNama by viewModel.cabangNama.collectAsState()
-    val cabangAlamat by viewModel.cabangAlamat.collectAsState()
-    val cabangNoWa by viewModel.cabangNoWa.collectAsState()
 
     var showReturnConfirmDialog by remember { mutableStateOf(false) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
@@ -88,9 +86,9 @@ fun DetailSewaBottomSheet(
         NotaTransaksiDialog(
             rental = updatedRentalForNota!!,
             kasirNama = kasirNama,
-            cabangNama = cabangNama,
-            cabangAlamat = cabangAlamat,
-            cabangNoWa = cabangNoWa,
+            cabangNama = userDoc.namaToko,
+            cabangAlamat = userDoc.alamatToko,
+            cabangNoWa = userDoc.noWaToko,
             viewModel = viewModel,
             onClose = {
                 updatedRentalForNota = null
@@ -107,7 +105,7 @@ fun DetailSewaBottomSheet(
             namaPenyewa = rental.namaPenyewa,
             namaBarang = rental.namaBarang,
             jumlahUnit = rental.jumlah,
-            cabangNama = cabangNama,
+            cabangNama = userDoc.namaToko.ifEmpty { "MYRENT STORE" },
             onBack = { showPelunasanScreen = false },
             onKonfirmasiPembayaran = { metode ->
                 showPelunasanScreen = false
@@ -248,7 +246,7 @@ fun DetailSewaBottomSheet(
 
             // Tombol Kirim WA Nota
             Button(
-                onClick = { viewModel.kirimWhatsAppNota(context, rental, cabangNama) },
+                onClick = { viewModel.kirimWhatsAppNota(context, rental) },
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(48.dp),

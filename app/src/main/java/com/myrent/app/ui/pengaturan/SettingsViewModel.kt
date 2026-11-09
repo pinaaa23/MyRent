@@ -4,10 +4,11 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.FirebaseFirestore
 import com.myrent.app.data.auth.AuthRepository
-import com.myrent.app.data.cabang.Cabang
-import com.myrent.app.data.cabang.CabangRepository
+import com.myrent.app.data.auth.UserDoc
 import com.myrent.app.data.kategori.Kategori
 import com.myrent.app.data.kategori.KategoriRepository
+import com.myrent.app.data.settings.StoreConfigDoc
+import com.myrent.app.data.settings.StoreConfigRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -23,83 +24,99 @@ sealed class SettingsUiState {
 }
 
 /**
- * ViewModel untuk mengelola Layar Pengaturan, Kelola Cabang, dan Kelola Kategori
+ * ViewModel untuk mengelola Layar Pengaturan, Profil Toko, Kustom Nota, & Template WA
  */
 class SettingsViewModel(
     private val authRepository: AuthRepository = AuthRepository(),
-    private val cabangRepository: CabangRepository = CabangRepository(),
     private val kategoriRepository: KategoriRepository = KategoriRepository(),
+    private val storeConfigRepository: StoreConfigRepository = StoreConfigRepository(),
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<SettingsUiState>(SettingsUiState.Idle)
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
+    private val _userDocState = MutableStateFlow(UserDoc())
+    val userDocState: StateFlow<UserDoc> = _userDocState.asStateFlow()
+
     private val _userName = MutableStateFlow("")
     val userName: StateFlow<String> = _userName.asStateFlow()
+
+    private val _userNamaToko = MutableStateFlow("")
+    val userNamaToko: StateFlow<String> = _userNamaToko.asStateFlow()
 
     private val _userEmail = MutableStateFlow("")
     val userEmail: StateFlow<String> = _userEmail.asStateFlow()
 
-    private val _userCabangNama = MutableStateFlow("")
-    val userCabangNama: StateFlow<String> = _userCabangNama.asStateFlow()
-
-    val cabangList: StateFlow<List<Cabang>> = cabangRepository.getDaftarCabangFlow()
-        .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
-
     val kategoriList: StateFlow<List<Kategori>> = kategoriRepository.getKategoriFlow()
         .stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
+    val storeConfig: StateFlow<StoreConfigDoc> = storeConfigRepository.getStoreConfigFlow()
+        .stateIn(viewModelScope, SharingStarted.Lazily, StoreConfigDoc())
+
     init {
-        loadUserProfileAndCabang()
+        loadUserProfile()
     }
 
-    fun loadUserProfileAndCabang() {
+    fun loadUserProfile() {
         viewModelScope.launch {
             val profileRes = authRepository.getUserProfile()
-            profileRes.onSuccess { userDoc ->
-                _userName.value = userDoc.nama
-                _userEmail.value = userDoc.email
-                if (userDoc.cabangId.isNotEmpty()) {
-                    val cabangRes = cabangRepository.getCabangById(userDoc.cabangId)
-                    cabangRes.onSuccess { cabang ->
-                        _userCabangNama.value = cabang.nama
+            profileRes.onSuccess { doc ->
+                var finalDoc = doc
+
+                // Migrasi 1x Aman untuk akun kusumarefina@gmail.com jika namaToko masih kosong/berisi UID
+                if (doc.email.equals("kusumarefina@gmail.com", ignoreCase = true) && (doc.namaToko.isEmpty() || doc.namaToko.length > 15)) {
+                    val uid = authRepository.currentUser?.uid
+                    if (!uid.isNullOrEmpty()) {
+                        try {
+                            firestore.collection("users").document(uid).update("namaToko", "Kusuma Rent").await()
+                            finalDoc = doc.copy(namaToko = "Kusuma Rent")
+                        } catch (e: Exception) {
+                            e.printStackTrace()
+                        }
                     }
                 }
+
+                _userDocState.value = finalDoc
+                _userName.value = finalDoc.nama
+                _userNamaToko.value = finalDoc.namaToko.ifEmpty { "Nama toko belum diisi" }
+                _userEmail.value = finalDoc.email
             }
         }
     }
 
-    fun tambahCabang(nama: String, alamat: String, noWa: String, onSuccess: () -> Unit) {
-        if (nama.trim().isEmpty()) {
-            _uiState.value = SettingsUiState.Error("Nama cabang tidak boleh kosong.")
-            return
-        }
+    fun saveNotaConfig(header: String, footer: String, onSuccess: () -> Unit) {
         viewModelScope.launch {
             _uiState.value = SettingsUiState.Loading
-            val res = cabangRepository.tambahCabang(Cabang(nama = nama, alamat = alamat, noWa = noWa))
+            val res = storeConfigRepository.saveNotaConfig(header, footer)
             res.onSuccess {
                 _uiState.value = SettingsUiState.Idle
                 onSuccess()
             }.onFailure {
-                _uiState.value = SettingsUiState.Error("Gagal menambah cabang, periksa koneksi internet.")
+                _uiState.value = SettingsUiState.Error("Gagal menyimpan kustom nota, periksa koneksi internet.")
             }
         }
     }
 
-    fun updateCabang(id: String, nama: String, alamat: String, noWa: String, onSuccess: () -> Unit) {
-        if (nama.trim().isEmpty()) {
-            _uiState.value = SettingsUiState.Error("Nama cabang tidak boleh kosong.")
+    fun saveWaTemplates(
+        templateNota: String,
+        templateH1: String,
+        templateH: String,
+        onSuccess: () -> Unit
+    ) {
+        if (templateNota.trim().isEmpty() || templateH1.trim().isEmpty() || templateH.trim().isEmpty()) {
+            _uiState.value = SettingsUiState.Error("Template pesan WhatsApp tidak boleh kosong.")
             return
         }
+
         viewModelScope.launch {
             _uiState.value = SettingsUiState.Loading
-            val res = cabangRepository.updateCabang(Cabang(id = id, nama = nama, alamat = alamat, noWa = noWa))
+            val res = storeConfigRepository.saveWaTemplates(templateNota, templateH1, templateH)
             res.onSuccess {
                 _uiState.value = SettingsUiState.Idle
                 onSuccess()
             }.onFailure {
-                _uiState.value = SettingsUiState.Error("Gagal mengubah cabang, periksa koneksi internet.")
+                _uiState.value = SettingsUiState.Error("Gagal menyimpan template WhatsApp, periksa koneksi internet.")
             }
         }
     }
@@ -142,8 +159,8 @@ class SettingsViewModel(
         viewModelScope.launch {
             _uiState.value = SettingsUiState.Loading
 
-            // Periksa apakah ada barang di koleksi items yang menggunakan nama kategori ini
-            val itemsSnapshot = firestore.collection("items")
+            val uid = authRepository.currentUser?.uid ?: ""
+            val itemsSnapshot = firestore.collection("toko").document(uid).collection("items")
                 .whereEqualTo("kategori", kategori.nama)
                 .limit(1)
                 .get()

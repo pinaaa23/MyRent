@@ -52,6 +52,7 @@ dependencies {
     implementation(libs.androidx.material.icons.extended)
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.work.runtime.ktx)
+    implementation(libs.androidx.exifinterface)
 
     // Firebase (BoM, Analytics, Authentication, Firestore)
     implementation(platform(libs.firebase.bom))

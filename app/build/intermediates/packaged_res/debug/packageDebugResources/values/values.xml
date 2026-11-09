@@ -4,7 +4,6 @@
     <color name="dark_background">#121212</color>
     <color name="dark_surface">#1E1E1E</color>
     <string name="app_name">MyRent</string>
-    <string name="btn_add_branch">Tambah Cabang Baru</string>
     <string name="btn_add_category">Tambah Kategori</string>
     <string name="btn_add_item">+ Tambah Barang</string>
     <string name="btn_back_to_dashboard">Kembali ke Dashboard</string>
@@ -23,7 +22,7 @@
     <string name="btn_new_rental">+ Sewa Baru</string>
     <string name="btn_pay">Lanjut ke Pembayaran</string>
     <string name="btn_print_receipt">Cetak Nota</string>
-    <string name="btn_register">Daftar</string>
+    <string name="btn_register">Daftar Toko</string>
     <string name="btn_resend_email">Kirim Ulang Email</string>
     <string name="btn_resend_email_cooldown">Kirim Ulang (%1$ds)</string>
     <string name="btn_save">Simpan</string>
@@ -44,13 +43,12 @@
     <string name="desc_verify_email">Kami telah mengirimkan email verifikasi ke:\n%1$s\n\nSilakan buka inbox email kamu dan tekan tautan verifikasi sebelum masuk.</string>
     <string name="email_not_verified">Email belum diverifikasi. Silakan periksa inbox/folder spam email kamu.</string>
     <string name="email_sent_success">Email verifikasi berhasil dikirim ulang.</string>
-    <string name="empty_available_items_warning">Tidak ada barang berstatus Tersedia di cabang ini.</string>
-    <string name="empty_cabang_warning">Belum ada cabang terdaftar di database.</string>
+    <string name="empty_available_items_warning">Tidak ada barang berstatus Tersedia di toko ini.</string>
     <string name="empty_followup_desc">Tidak ada barang yang perlu di-follow up hari ini.</string>
     <string name="empty_followup_title">Semua Sewa Aman!</string>
-    <string name="empty_items_desc">Belum ada barang di cabang ini. Ketuk + Tambah Barang untuk memulai.</string>
+    <string name="empty_items_desc">Belum ada barang di toko ini. Ketuk + Tambah Barang untuk memulai.</string>
     <string name="empty_items_title">Belum Ada Barang</string>
-    <string name="empty_rentals_desc">Belum ada sewa tercatat di cabang ini. Ketuk + Sewa Baru untuk mencatat sewa.</string>
+    <string name="empty_rentals_desc">Belum ada sewa tercatat di toko ini. Ketuk + Sewa Baru untuk mencatat sewa.</string>
     <string name="empty_rentals_title">Belum Ada Transaksi Sewa</string>
     <string name="error_cannot_delete_rented">Barang yang sedang disewa tidak dapat dihapus.</string>
     <string name="error_category_name_empty">Nama kategori tidak boleh kosong.</string>
@@ -66,7 +64,6 @@
     <string name="error_no_network">Tidak ada koneksi internet. Periksa koneksi Anda.</string>
     <string name="error_password_mismatch">Kata sandi dan konfirmasi kata sandi tidak sama.</string>
     <string name="error_quantity_exceeds_stock">Jumlah disewa (%1$d) melebihi stok yang tersedia (%2$d).</string>
-    <string name="error_select_cabang">Silakan pilih cabang terlebih dahulu.</string>
     <string name="error_short_password">Kata sandi minimal 6 karakter.</string>
     <string name="error_too_many_requests">Terlalu banyak percobaan. Silakan coba beberapa saat lagi.</string>
     <string name="error_unknown">Terjadi kesalahan. Silakan coba lagi.</string>
@@ -81,17 +78,14 @@
     <string name="google_app_id" translatable="false">1:464736777558:android:ea2d45cc97b442c1cad2f7</string>
     <string name="google_crash_reporting_api_key" translatable="false">AIzaSyCKpneFwtHL4DbtVuU4VYcnxaIodBLbi-A</string>
     <string name="google_storage_bucket" translatable="false">myrent-4f12c.firebasestorage.app</string>
-    <string name="label_branch">Cabang Tempat Tugas</string>
-    <string name="label_branch_address">Alamat</string>
-    <string name="label_branch_name">Nama Cabang</string>
-    <string name="label_branch_phone">Nomor WhatsApp</string>
+    <string name="label_branch">Toko / Cabang</string>
     <string name="label_category_name">Nama Kategori</string>
     <string name="label_confirm_password">Ulangi Kata Sandi</string>
     <string name="label_dp">Uang Muka / DP (Rp)</string>
     <string name="label_duration">Lama Sewa</string>
     <string name="label_email">Email</string>
     <string name="label_end_date">Tanggal Kembali</string>
-    <string name="label_full_name">Nama Lengkap</string>
+    <string name="label_full_name">Nama Lengkap Pemilik</string>
     <string name="label_item_category">Kategori</string>
     <string name="label_item_name">Nama Barang</string>
     <string name="label_item_notes">Catatan (opsional)</string>
@@ -100,21 +94,20 @@
     <string name="label_item_status">Status Barang</string>
     <string name="label_item_stock">Jumlah Stok Barang</string>
     <string name="label_notes_guarantee">Catatan / Jaminan (Ukuran/KTP/dll)</string>
+    <string name="label_owner_name">Nama Pemilik</string>
     <string name="label_password">Kata Sandi</string>
     <string name="label_payment_status">Status Pembayaran</string>
     <string name="label_remaining_payment">Sisa Pembayaran</string>
     <string name="label_rental_quantity">Jumlah Barang Disewa</string>
-    <string name="label_select_cabang">Pilih Cabang</string>
     <string name="label_select_item">Pilih Barang (Tersedia)</string>
     <string name="label_start_date">Tanggal Mulai</string>
+    <string name="label_store_name">Nama Toko / Cabang</string>
     <string name="label_tenant_name">Nama Penyewa</string>
     <string name="label_tenant_phone">Nomor WA Penyewa</string>
     <string name="label_total_price">Total Biaya Sewa (Rp)</string>
     <string name="link_forgot_password">Lupa kata sandi?</string>
     <string name="link_login">Masuk</string>
-    <string name="link_register">Daftar</string>
-    <string name="loading_cabang">Memuat daftar cabang…</string>
-    <string name="menu_manage_branch">Kelola Cabang</string>
+    <string name="link_register">Daftar Akun Toko Baru</string>
     <string name="menu_manage_category">Kelola Kategori</string>
     <string name="metode_qris">QRIS</string>
     <string name="metode_tunai">Tunai (Cash)</string>
@@ -125,6 +118,7 @@
     <string name="nav_report">Laporan</string>
     <string name="placeholder_email">nama@email.com</string>
     <string name="placeholder_search_rental">Cari nama penyewa atau No WA...</string>
+    <string name="placeholder_store_name">misal: Suka Jaya Rent</string>
     <string name="project_id" translatable="false">myrent-4f12c</string>
     <string name="qr_code_desc">Silakan tunjukkan QRIS di atas kepada konsumen</string>
     <string name="rented_status_warning">Sedang Disewa (Tidak dapat diubah manual)</string>
@@ -144,22 +138,19 @@
     <string name="tag_due_tomorrow">H-1</string>
     <string name="text_already_have_account">Sudah punya akun? </string>
     <string name="text_dont_have_account">Belum punya akun? </string>
-    <string name="title_add_branch">Tambah Cabang</string>
     <string name="title_add_category">Tambah Kategori Baru</string>
     <string name="title_add_item">Tambah Barang Baru</string>
     <string name="title_add_rental">Sewa Baru</string>
     <string name="title_catalog">Katalog Barang</string>
-    <string name="title_edit_branch">Edit Cabang</string>
     <string name="title_edit_category">Edit Kategori</string>
     <string name="title_edit_item">Edit Barang</string>
     <string name="title_forgot_password">Lupa Kata Sandi</string>
     <string name="title_login">Masuk ke MyRent</string>
-    <string name="title_manage_branch">Kelola Cabang</string>
     <string name="title_manage_category">Kelola Kategori</string>
     <string name="title_need_follow_up">Perlu di-Follow Up</string>
     <string name="title_payment_method">Pilih Metode Pembayaran</string>
     <string name="title_receipt">Nota Transaksi</string>
-    <string name="title_register">Buat Akun Baru</string>
+    <string name="title_register">Pendaftaran Toko Baru</string>
     <string name="title_rental_detail">Detail Transaksi Sewa</string>
     <string name="title_rentals">Sewa Barang</string>
     <string name="title_settings">Pengaturan</string>

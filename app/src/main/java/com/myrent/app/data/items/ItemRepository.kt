@@ -1,5 +1,6 @@
 package com.myrent.app.data.items
 
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.flow.Flow
@@ -7,50 +8,71 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
 /**
- * Repository pengelola koleksi "items" di Firestore
+ * Repository pengelola koleksi "items" terisolasi per akun toko (toko/{uid}/items)
  */
 class ItemRepository(
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) {
+    private val currentUid: String
+        get() = auth.currentUser?.uid ?: ""
+
+    private fun getItemCollection(uid: String = currentUid) =
+        firestore.collection("toko").document(uid.ifEmpty { "global" }).collection("items")
+
     /**
-     * Mendapatkan daftar items berdasarkan cabangId secara realtime via Flow.
-     * Diurutkan di sisi Kotlin / Aplikasi (tanpa orderBy di query Firestore) agar tidak membutuhkan index komposit.
+     * Mendapatkan semua daftar items milik akun terisolasi toko/{uid}/items secara realtime via Flow.
+     * Jika koleksi toko/{uid}/items masih kosong, otomatis melakukan migrasi 1x dari data lama.
      */
-    fun getItemsFlow(cabangId: String): Flow<List<Item>> = callbackFlow {
-        if (cabangId.isEmpty()) {
+    fun getItemsFlow(): Flow<List<Item>> = callbackFlow {
+        val uid = currentUid
+        if (uid.isEmpty()) {
             trySend(emptyList())
             awaitClose { }
             return@callbackFlow
         }
 
-        val listener = firestore.collection("items")
-            .whereEqualTo("cabangId", cabangId)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    close(error)
-                    return@addSnapshotListener
-                }
-                val list = snapshot?.documents?.map { doc ->
-                    val stok = (doc.getLong("stok") ?: 1L).toInt()
-                    val stokTersedia = (doc.getLong("stokTersedia") ?: stok.toLong()).toInt()
-                    Item(
-                        id = doc.id,
-                        cabangId = doc.getString("cabangId") ?: "",
-                        nama = doc.getString("nama") ?: "",
-                        kategori = doc.getString("kategori") ?: "",
-                        ukuran = doc.getString("ukuran") ?: "",
-                        hargaSewa = doc.getLong("hargaSewa") ?: 0L,
-                        stok = stok,
-                        stokTersedia = stokTersedia,
-                        fotoBase64 = doc.getString("fotoBase64") ?: "",
-                        status = doc.getString("status") ?: "tersedia",
-                        catatan = doc.getString("catatan") ?: "",
-                        dibuatPada = doc.getLong("dibuatPada") ?: 0L
-                    )
-                }?.sortedByDescending { it.dibuatPada } ?: emptyList()
+        val userItemsRef = getItemCollection(uid)
 
-                trySend(list)
+        // Cek migrasi data lama jika brankas toko/{uid}/items akun ini masih kosong
+        userItemsRef.limit(1).get().addOnSuccessListener { userSnap ->
+            if (userSnap.isEmpty) {
+                firestore.collection("items").get().addOnSuccessListener { legacySnap ->
+                    if (!legacySnap.isEmpty) {
+                        legacySnap.documents.forEach { doc ->
+                            userItemsRef.document(doc.id).set(doc.data ?: emptyMap<String, Any>())
+                        }
+                    }
+                }
             }
+        }
+
+        val listener = userItemsRef.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                close(error)
+                return@addSnapshotListener
+            }
+            val list = snapshot?.documents?.map { doc ->
+                val stok = (doc.getLong("stok") ?: 1L).toInt()
+                val stokTersedia = (doc.getLong("stokTersedia") ?: stok.toLong()).toInt()
+                Item(
+                    id = doc.id,
+                    cabangId = doc.getString("cabangId") ?: "",
+                    nama = doc.getString("nama") ?: "",
+                    kategori = doc.getString("kategori") ?: "",
+                    ukuran = doc.getString("ukuran") ?: "",
+                    hargaSewa = doc.getLong("hargaSewa") ?: 0L,
+                    stok = stok,
+                    stokTersedia = stokTersedia,
+                    fotoBase64 = doc.getString("fotoBase64") ?: "",
+                    status = doc.getString("status") ?: "tersedia",
+                    catatan = doc.getString("catatan") ?: "",
+                    dibuatPada = doc.getLong("dibuatPada") ?: 0L
+                )
+            }?.sortedByDescending { it.dibuatPada } ?: emptyList()
+
+            trySend(list)
+        }
         awaitClose { listener.remove() }
     }
 
@@ -62,13 +84,13 @@ class ItemRepository(
             "ukuran" to item.ukuran,
             "hargaSewa" to item.hargaSewa,
             "stok" to item.stok,
-            "stokTersedia" to item.stok, // Stok awal tersedia selalu sama dengan stok total saat pertama dibuat
+            "stokTersedia" to item.stok,
             "fotoBase64" to item.fotoBase64,
             "status" to item.status,
             "catatan" to item.catatan,
             "dibuatPada" to item.dibuatPada
         )
-        firestore.collection("items").add(map).await()
+        getItemCollection().add(map).await()
     }
 
     suspend fun updateItem(item: Item): Result<Unit> = runCatching {
@@ -83,10 +105,10 @@ class ItemRepository(
             "status" to item.status,
             "catatan" to item.catatan
         )
-        firestore.collection("items").document(item.id).update(map).await()
+        getItemCollection().document(item.id).update(map).await()
     }
 
     suspend fun hapusItem(id: String): Result<Unit> = runCatching {
-        firestore.collection("items").document(id).delete().await()
+        getItemCollection().document(id).delete().await()
     }
 }

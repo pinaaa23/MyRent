@@ -11,7 +11,7 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import com.myrent.app.R
 
 /**
- * Definisi rute navigasi dan properti menu bottom bar
+ * Definisi rute navigasi dan properti menu bottom bar & sub-layar
  */
 sealed class Screen(
     val route: String,
@@ -25,6 +25,9 @@ sealed class Screen(
     object ForgotPassword : Screen("forgot_password")
     object MainApp : Screen("main_app")
     object Settings : Screen("settings")
+    object EditProfile : Screen("edit_profile")
+    object CustomReceipt : Screen("custom_receipt")
+    object WaTemplates : Screen("wa_templates")
 
     // Rute Bottom Navigation Menu (5 Menu)
     object Home : Screen("home", R.string.nav_home, Icons.Filled.Home)

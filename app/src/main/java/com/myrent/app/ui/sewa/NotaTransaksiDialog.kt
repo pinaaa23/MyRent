@@ -5,6 +5,7 @@ import android.print.PrintAttributes
 import android.print.PrintManager
 import android.webkit.WebView
 import android.webkit.WebViewClient
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -32,10 +33,15 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
@@ -44,7 +50,9 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.myrent.app.R
+import com.myrent.app.data.foto.FotoRepository
 import com.myrent.app.data.rentals.Rental
+import com.myrent.app.data.settings.DefaultStoreConfig
 import com.myrent.app.ui.screens.formatDate
 import com.myrent.app.ui.screens.formatRupiah
 import com.myrent.app.ui.theme.DarkBackground
@@ -54,20 +62,30 @@ import java.util.Date
 import java.util.Locale
 
 /**
- * Dialog Layar Nota Transaksi Profesional (Struk Termal Kasir LENGKAP)
+ * Dialog Layar Nota Transaksi Profesional (Struk Termal Kasir LENGKAP dengan Logo & Kustom Header/Footer)
  */
 @Composable
 fun NotaTransaksiDialog(
     rental: Rental,
     kasirNama: String,
-    cabangNama: String,
-    cabangAlamat: String,
-    cabangNoWa: String,
+    cabangNama: String = "",
+    cabangAlamat: String = "",
+    cabangNoWa: String = "",
     viewModel: RentalViewModel,
     onClose: () -> Unit
 ) {
     val context = LocalContext.current
     val scrollState = rememberScrollState()
+
+    val userDoc by viewModel.userDocState.collectAsState()
+    val storeConfigDoc by viewModel.storeConfig.collectAsState()
+    val fotoRepo = remember { FotoRepository() }
+
+    val namaToko = userDoc.namaToko.ifEmpty { cabangNama.ifEmpty { "MYRENT STORE" } }
+    val alamatToko = userDoc.alamatToko.ifEmpty { cabangAlamat }
+    val noWaToko = userDoc.noWaToko.ifEmpty { cabangNoWa }
+    val headerText = storeConfigDoc.notaHeader.ifEmpty { DefaultStoreConfig.NOTA_HEADER_DEFAULT }
+    val footerText = storeConfigDoc.notaFooter.ifEmpty { DefaultStoreConfig.NOTA_FOOTER_DEFAULT }
 
     val tglSewaStr = remember(rental.dibuatPada) {
         val sdf = SimpleDateFormat("dd MMM yyyy, HH:mm", Locale("id", "ID"))
@@ -139,29 +157,63 @@ fun NotaTransaksiDialog(
                         .padding(20.dp),
                     horizontalAlignment = Alignment.CenterHorizontally
                 ) {
-                    // Kop Toko
+                    // Logo Toko (jika ada)
+                    val bitmap = remember(userDoc.fotoProfilBase64) {
+                        if (userDoc.fotoProfilBase64.isNotEmpty()) fotoRepo.base64ToBitmap(userDoc.fotoProfilBase64) else null
+                    }
+
+                    if (bitmap != null) {
+                        Image(
+                            bitmap = bitmap.asImageBitmap(),
+                            contentDescription = "Logo Struk",
+                            contentScale = ContentScale.Fit,
+                            modifier = Modifier
+                                .size(54.dp)
+                                .clip(RoundedCornerShape(6.dp))
+                        )
+                        Spacer(modifier = Modifier.height(6.dp))
+                    }
+
+                    // Kop Nama Toko
                     Text(
-                        text = "MYRENT STORE - ${cabangNama.ifEmpty { "PUSAT" }}".uppercase(),
+                        text = namaToko.uppercase(),
                         fontSize = 16.sp,
                         fontWeight = FontWeight.Bold,
                         fontFamily = FontFamily.Monospace,
                         color = Color.Black,
                         textAlign = TextAlign.Center
                     )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = "Telp/WA: ${cabangNoWa.ifEmpty { "08123456789" }}",
-                        fontSize = 12.sp,
-                        fontFamily = FontFamily.Monospace,
-                        color = Color.Black
-                    )
-                    Text(
-                        text = cabangAlamat.ifEmpty { "Jl. Janti-Yogyakarta" },
-                        fontSize = 12.sp,
-                        fontFamily = FontFamily.Monospace,
-                        color = Color.Black,
-                        textAlign = TextAlign.Center
-                    )
+
+                    // Header Teks Kop
+                    if (headerText.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = headerText,
+                            fontSize = 11.sp,
+                            fontFamily = FontFamily.Monospace,
+                            color = Color.DarkGray,
+                            textAlign = TextAlign.Center
+                        )
+                    }
+
+                    // Alamat & WA Toko
+                    if (noWaToko.isNotEmpty()) {
+                        Text(
+                            text = "Telp/WA: $noWaToko",
+                            fontSize = 12.sp,
+                            fontFamily = FontFamily.Monospace,
+                            color = Color.Black
+                        )
+                    }
+                    if (alamatToko.isNotEmpty()) {
+                        Text(
+                            text = alamatToko,
+                            fontSize = 12.sp,
+                            fontFamily = FontFamily.Monospace,
+                            color = Color.Black,
+                            textAlign = TextAlign.Center
+                        )
+                    }
 
                     ReceiptDivider()
 
@@ -239,18 +291,9 @@ fun NotaTransaksiDialog(
 
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    // Catatan Pengembalian
+                    // Footer Struk Kustom
                     Text(
-                        text = "* Mohon tunjukkan nota ini saat pengembalian barang.",
-                        fontSize = 11.sp,
-                        fontWeight = FontWeight.Bold,
-                        fontFamily = FontFamily.Monospace,
-                        color = Color.Black,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(modifier = Modifier.height(2.dp))
-                    Text(
-                        text = "Terima kasih telah menyewa alat di MyRent.",
+                        text = footerText,
                         fontSize = 11.sp,
                         fontFamily = FontFamily.Monospace,
                         color = Color.Black,
@@ -268,7 +311,7 @@ fun NotaTransaksiDialog(
             ) {
                 // Tombol Kirim WA Nota
                 Button(
-                    onClick = { viewModel.kirimWhatsAppNota(context, rental, cabangNama) },
+                    onClick = { viewModel.kirimWhatsAppNota(context, rental) },
                     modifier = Modifier
                         .weight(1f)
                         .height(52.dp),
@@ -285,7 +328,7 @@ fun NotaTransaksiDialog(
 
                 // Tombol Cetak Nota
                 Button(
-                    onClick = { cetakStrukProfesional(context, rental, invoiceId, tglSewaStr, tglMulaiStr, tglKembaliStr, cabangNama, cabangAlamat, cabangNoWa, kasirNama) },
+                    onClick = { cetakStrukProfesional(context, rental, invoiceId, tglSewaStr, tglMulaiStr, tglKembaliStr, namaToko, alamatToko, noWaToko, kasirNama, headerText, footerText, userDoc.fotoProfilBase64) },
                     modifier = Modifier
                         .weight(1f)
                         .height(52.dp),
@@ -364,7 +407,7 @@ fun ReceiptInfoLine(label: String, value: String) {
 }
 
 /**
- * Fungsi Cetak Struk Profesional via Android PrintManager
+ * Fungsi Cetak Struk Profesional via Android PrintManager dengan Logo & Header/Footer Kustom
  */
 fun cetakStrukProfesional(
     context: Context,
@@ -373,14 +416,21 @@ fun cetakStrukProfesional(
     tglSewaStr: String,
     tglMulaiStr: String,
     tglKembaliStr: String,
-    cabangNama: String,
-    cabangAlamat: String,
-    cabangNoWa: String,
-    kasirNama: String
+    namaToko: String,
+    alamatToko: String,
+    noWaToko: String,
+    kasirNama: String,
+    headerText: String,
+    footerText: String,
+    fotoBase64: String
 ) {
     try {
         val unitHarga = if (rental.jumlah > 0 && rental.lamaHari > 0) rental.hargaTotal / (rental.jumlah * rental.lamaHari) else rental.hargaTotal
         val statusStr = if (rental.sisaBayar == 0L) "LUNAS" else "BELUM LUNAS"
+
+        val logoHtml = if (fotoBase64.isNotEmpty()) {
+            "<div class='center'><img src='data:image/jpeg;base64,$fotoBase64' style='max-width: 80px; max-height: 80px; filter: grayscale(100%) contrast(200%); margin-bottom: 5px;' /></div>"
+        } else ""
 
         val htmlContent = """
             <html>
@@ -394,9 +444,11 @@ fun cetakStrukProfesional(
                 </style>
             </head>
             <body>
-                <div class="center bold" style="font-size: 16px;">MYRENT STORE - ${cabangNama.ifEmpty { "PUSAT" }}</div>
-                <div class="center">Telp/WA: ${cabangNoWa.ifEmpty { "08123456789" }}</div>
-                <div class="center">${cabangAlamat.ifEmpty { "Jl. Janti-Yogyakarta" }}</div>
+                $logoHtml
+                <div class="center bold" style="font-size: 16px;">${namaToko.ifEmpty { "MYRENT STORE" }.uppercase()}</div>
+                ${if (headerText.isNotEmpty()) "<div class='center' style='font-size: 11px;'>$headerText</div>" else ""}
+                ${if (noWaToko.isNotEmpty()) "<div class='center'>Telp/WA: $noWaToko</div>" else ""}
+                ${if (alamatToko.isNotEmpty()) "<div class='center'>$alamatToko</div>" else ""}
                 <div class="divider"></div>
                 <div>No Invoice : <span class="bold">$invoiceId</span></div>
                 <div>Waktu &nbsp;&nbsp;&nbsp;&nbsp;&nbsp;: $tglSewaStr</div>
@@ -438,8 +490,7 @@ fun cetakStrukProfesional(
                 <div class="divider"></div>
                 ${if (rental.catatan.isNotEmpty()) "<div>Jaminan/Note: ${rental.catatan}</div><div class='divider'></div>" else ""}
                 <br/>
-                <div class="center bold">* Mohon tunjukkan nota ini saat pengembalian barang.</div>
-                <div class="center">Terima kasih telah menyewa alat di MyRent.</div>
+                <div class="center" style="white-space: pre-line;">${footerText.ifEmpty { DefaultStoreConfig.NOTA_FOOTER_DEFAULT }}</div>
             </body>
             </html>
         """.trimIndent()

@@ -42,6 +42,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -55,7 +56,6 @@ import com.myrent.app.ui.beranda.HomeViewModel
 import com.myrent.app.ui.theme.AccentGold
 import com.myrent.app.ui.theme.DarkBackground
 import com.myrent.app.ui.theme.DarkSurface
-import com.myrent.app.ui.theme.DarkSurfaceVariant
 import com.myrent.app.ui.theme.TextPrimary
 import com.myrent.app.ui.theme.TextSecondary
 
@@ -69,7 +69,7 @@ fun HomeScreen(
     homeViewModel: HomeViewModel = viewModel()
 ) {
     val context = LocalContext.current
-    val cabangNama by homeViewModel.userCabangNama.collectAsState()
+    val userNamaToko by homeViewModel.userNamaToko.collectAsState()
     val sewaBerjalanCount by homeViewModel.sewaBerjalanCount.collectAsState()
     val jatuhTempoHariIniCount by homeViewModel.jatuhTempoHariIniCount.collectAsState()
     val omzetHariIni by homeViewModel.omzetHariIni.collectAsState()
@@ -86,9 +86,9 @@ fun HomeScreen(
                             fontWeight = FontWeight.Bold,
                             fontSize = 20.sp
                         )
-                        if (cabangNama.isNotEmpty()) {
+                        if (userNamaToko.isNotEmpty()) {
                             Text(
-                                text = cabangNama,
+                                text = userNamaToko,
                                 color = AccentGold,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Medium
@@ -245,7 +245,7 @@ fun SummaryCard(
     modifier: Modifier = Modifier,
     title: String,
     value: String,
-    icon: androidx.compose.ui.graphics.vector.ImageVector,
+    icon: ImageVector,
     iconColor: Color
 ) {
     Card(

@@ -1,9 +1,7 @@
 package com.myrent.app.ui.auth
 
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -17,14 +15,11 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.DropdownMenu
-import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.OutlinedTextField
@@ -39,6 +34,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
@@ -47,16 +43,14 @@ import androidx.compose.ui.text.input.VisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.myrent.app.R
-import com.myrent.app.data.cabang.Cabang
 import com.myrent.app.ui.theme.AccentGold
 import com.myrent.app.ui.theme.DarkBackground
-import com.myrent.app.ui.theme.DarkSurface
 import com.myrent.app.ui.theme.DarkSurfaceVariant
 import com.myrent.app.ui.theme.TextPrimary
 import com.myrent.app.ui.theme.TextSecondary
 
 /**
- * Layar Pendaftaran (Buat Akun Baru)
+ * Layar Pendaftaran Toko Baru (1 Akun = 1 Toko Mandiri)
  */
 @Composable
 fun RegisterScreen(
@@ -64,18 +58,16 @@ fun RegisterScreen(
     onNavigateToLogin: () -> Unit,
     onRegisterSuccess: () -> Unit
 ) {
-    var nama by remember { mutableStateOf("") }
+    var namaPemilik by remember { mutableStateOf("") }
+    var namaToko by remember { mutableStateOf("") }
     var email by remember { mutableStateOf("") }
     var password by remember { mutableStateOf("") }
     var confirmPassword by remember { mutableStateOf("") }
-    var selectedCabang by remember { mutableStateOf<Cabang?>(null) }
+
     var isPasswordVisible by remember { mutableStateOf(false) }
     var isConfirmPasswordVisible by remember { mutableStateOf(false) }
-    var isCabangDropdownExpanded by remember { mutableStateOf(false) }
 
     val uiState by viewModel.uiState.collectAsState()
-    val daftarCabang by viewModel.daftarCabangState.collectAsState()
-    val isLoadingCabang by viewModel.isLoadingCabang.collectAsState()
     val isLoading = uiState is AuthUiState.Loading
 
     val scrollState = rememberScrollState()
@@ -91,7 +83,7 @@ fun RegisterScreen(
     ) {
         Text(
             text = stringResource(id = R.string.title_register),
-            fontSize = 26.sp,
+            fontSize = 24.sp,
             fontWeight = FontWeight.Bold,
             color = TextPrimary
         )
@@ -103,20 +95,43 @@ fun RegisterScreen(
             val errorRes = (uiState as AuthUiState.Error).messageResId
             Text(
                 text = stringResource(id = errorRes),
-                color = androidx.compose.ui.graphics.Color(0xFFFF6B6B),
+                color = Color(0xFFFF6B6B),
                 fontSize = 14.sp,
                 modifier = Modifier.padding(bottom = 16.dp)
             )
         }
 
-        // Input Nama Lengkap
+        // Input Nama Pemilik
         OutlinedTextField(
-            value = nama,
+            value = namaPemilik,
             onValueChange = {
-                nama = it
+                namaPemilik = it
                 viewModel.resetUiState()
             },
-            label = { Text(stringResource(id = R.string.label_full_name)) },
+            label = { Text(stringResource(id = R.string.label_owner_name)) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+            colors = OutlinedTextFieldDefaults.colors(
+                focusedBorderColor = AccentGold,
+                unfocusedBorderColor = DarkSurfaceVariant,
+                focusedLabelColor = AccentGold,
+                unfocusedLabelColor = TextSecondary,
+                focusedTextColor = TextPrimary,
+                unfocusedTextColor = TextPrimary
+            )
+        )
+
+        Spacer(modifier = Modifier.height(12.dp))
+
+        // Input Nama Toko / Cabang
+        OutlinedTextField(
+            value = namaToko,
+            onValueChange = {
+                namaToko = it
+                viewModel.resetUiState()
+            },
+            label = { Text(stringResource(id = R.string.label_store_name)) },
+            placeholder = { Text(stringResource(id = R.string.placeholder_store_name)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
             colors = OutlinedTextFieldDefaults.colors(
@@ -219,110 +234,17 @@ fun RegisterScreen(
             )
         )
 
-        Spacer(modifier = Modifier.height(12.dp))
-
-        // Pilihan Cabang (Dropdown Menu)
-        Box(modifier = Modifier.fillMaxWidth()) {
-            OutlinedTextField(
-                value = selectedCabang?.nama ?: "",
-                onValueChange = {},
-                readOnly = true,
-                label = { Text(stringResource(id = R.string.label_select_cabang)) },
-                trailingIcon = {
-                    if (isLoadingCabang) {
-                        CircularProgressIndicator(
-                            modifier = Modifier.size(20.dp),
-                            color = AccentGold,
-                            strokeWidth = 2.dp
-                        )
-                    } else {
-                        Icon(
-                            imageVector = Icons.Filled.ArrowDropDown,
-                            contentDescription = "Dropdown Cabang",
-                            tint = TextSecondary
-                        )
-                    }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { isCabangDropdownExpanded = true },
-                enabled = false,
-                colors = OutlinedTextFieldDefaults.colors(
-                    disabledBorderColor = DarkSurfaceVariant,
-                    disabledLabelColor = TextSecondary,
-                    disabledTextColor = TextPrimary,
-                    disabledTrailingIconColor = TextSecondary
-                )
-            )
-
-            // Transparent overlay overlaying the field to capture click
-            Box(
-                modifier = Modifier
-                    .matchParentSize()
-                    .clickable {
-                        if (!isLoadingCabang) isCabangDropdownExpanded = true
-                    }
-            )
-
-            DropdownMenu(
-                expanded = isCabangDropdownExpanded,
-                onDismissRequest = { isCabangDropdownExpanded = false },
-                modifier = Modifier
-                    .fillMaxWidth(0.85f)
-                    .background(DarkSurface)
-            ) {
-                if (daftarCabang.isEmpty()) {
-                    DropdownMenuItem(
-                        text = {
-                            Text(
-                                text = stringResource(id = R.string.empty_cabang_warning),
-                                color = TextSecondary,
-                                fontSize = 13.sp
-                            )
-                        },
-                        onClick = { isCabangDropdownExpanded = false }
-                    )
-                } else {
-                    daftarCabang.forEach { cabang ->
-                        DropdownMenuItem(
-                            text = {
-                                Column {
-                                    Text(
-                                        text = cabang.nama,
-                                        color = TextPrimary,
-                                        fontWeight = FontWeight.Bold
-                                    )
-                                    if (cabang.alamat.isNotEmpty()) {
-                                        Text(
-                                            text = cabang.alamat,
-                                            color = TextSecondary,
-                                            fontSize = 12.sp
-                                        )
-                                    }
-                                }
-                            },
-                            onClick = {
-                                selectedCabang = cabang
-                                isCabangDropdownExpanded = false
-                                viewModel.resetUiState()
-                            }
-                        )
-                    }
-                }
-            }
-        }
-
         Spacer(modifier = Modifier.height(24.dp))
 
-        // Tombol Daftar
+        // Tombol Daftar Toko
         Button(
             onClick = {
-                viewModel.register(
-                    nama = nama,
-                    email = email,
-                    password = password,
-                    confirmPassword = confirmPassword,
-                    selectedCabang = selectedCabang,
+                viewModel.registerUser(
+                    fullNameInput = namaPemilik,
+                    storeNameInput = namaToko,
+                    emailInput = email,
+                    passwordInput = password,
+                    confirmPasswordInput = confirmPassword,
                     onSuccess = onRegisterSuccess
                 )
             },

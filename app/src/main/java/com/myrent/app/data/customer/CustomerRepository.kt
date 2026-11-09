@@ -8,25 +8,18 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
 /**
- * Repository pengelola koleksi "customers" di Firestore dengan Self-Healing Deduplikasi
+ * Repository pengelola koleksi "customers" di Firestore (Tanpa Filter Cabang)
  */
 class CustomerRepository(
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) {
 
     /**
-     * Mendapatkan daftar penyewa unik secara realtime via Flow berdasarkan cabangId.
-     * Secara otomatis membersihkan dokumen duplikat dari Firestore jika ada.
+     * Mendapatkan semua penyewa secara realtime via Flow.
+     * Membersihkan duplikat berdasarkan noWaNorm secara otomatis.
      */
-    fun getCustomersFlow(cabangId: String): Flow<List<Customer>> = callbackFlow {
-        if (cabangId.isEmpty()) {
-            trySend(emptyList())
-            awaitClose { }
-            return@callbackFlow
-        }
-
+    fun getCustomersFlow(): Flow<List<Customer>> = callbackFlow {
         val listener = firestore.collection("customers")
-            .whereEqualTo("cabangId", cabangId)
             .addSnapshotListener { snapshot, error ->
                 if (error != null) {
                     close(error)
@@ -56,11 +49,10 @@ class CustomerRepository(
                     if (docs.size == 1) {
                         uniqueList.add(docs[0])
                     } else if (docs.size > 1) {
-                        // Jika ada duplikat di Firestore, ambil dokumen yang paling baru diubah
                         val primary = docs.maxByOrNull { it.diubahPada } ?: docs[0]
                         uniqueList.add(primary)
 
-                        // Bersihkan dokumen duplikat lama di Firestore
+                        // Bersihkan dokumen duplikat di Firestore
                         docs.filter { it.id != primary.id }.forEach { duplicateDoc ->
                             firestore.collection("customers").document(duplicateDoc.id).delete()
                         }
@@ -75,14 +67,13 @@ class CustomerRepository(
     }
 
     /**
-     * Membuat atau memperbarui dokumen customer unik berdasarkan cabangId + noWaNorm
-     * Document ID: "{cabangId}_{noWaNorm}"
+     * Membuat atau memperbarui dokumen customer unik berdasarkan noWaNorm
      */
-    suspend fun upsertCustomer(cabangId: String, nama: String, noWaRaw: String): Result<Customer> = runCatching {
+    suspend fun upsertCustomer(nama: String, noWaRaw: String): Result<Customer> = runCatching {
         val noWaNorm = normalizeNoWa(noWaRaw)
         require(noWaNorm.length in 10..14) { "Nomor WA harus 10 sampai 14 digit." }
 
-        val docId = "${cabangId}_${noWaNorm}"
+        val docId = noWaNorm
         val docRef = firestore.collection("customers").document(docId)
         val snapshot = docRef.get().await()
 
@@ -100,7 +91,7 @@ class CustomerRepository(
             }
             Customer(
                 id = docId,
-                cabangId = cabangId,
+                cabangId = snapshot.getString("cabangId") ?: "",
                 nama = nama.trim(),
                 noWa = noWaNorm,
                 dibuatPada = snapshot.getLong("dibuatPada") ?: now,
@@ -109,14 +100,14 @@ class CustomerRepository(
         } else {
             val customer = Customer(
                 id = docId,
-                cabangId = cabangId,
+                cabangId = "",
                 nama = nama.trim(),
                 noWa = noWaNorm,
                 dibuatPada = now,
                 diubahPada = now
             )
             val map = mapOf(
-                "cabangId" to cabangId,
+                "cabangId" to "",
                 "nama" to customer.nama,
                 "noWa" to customer.noWa,
                 "dibuatPada" to customer.dibuatPada,
@@ -138,7 +129,7 @@ class CustomerRepository(
         val newNoWaNorm = normalizeNoWa(newNoWaRaw)
         require(newNoWaNorm.length in 10..14) { "Nomor WA harus 10 sampai 14 digit." }
 
-        val newDocId = "${oldCustomer.cabangId}_${newNoWaNorm}"
+        val newDocId = newNoWaNorm
         val now = System.currentTimeMillis()
 
         if (newDocId != oldCustomer.id) {
@@ -180,38 +171,42 @@ class CustomerRepository(
     }
 
     /**
-     * Migrasi data penyewa dari rentals lama ke koleksi customers
+     * Migrasi data penyewa dari rentals lama ke koleksi customers jika masih kosong
      */
-    suspend fun migrateCustomersFromRentalsIfEmpty(
-        cabangId: String,
-        rentalsList: List<Rental>
-    ): Result<Unit> = runCatching {
-        if (cabangId.isEmpty() || rentalsList.isEmpty()) return@runCatching
+    suspend fun migrateCustomersFromRentalsIfEmpty(rentalsList: List<Rental>): Result<Unit> = runCatching {
+        if (rentalsList.isEmpty()) return@runCatching
 
-        val grouped = rentalsList.groupBy { normalizeNoWa(it.noWa) }
-        grouped.forEach { (noWaNorm, rentals) ->
-            if (noWaNorm.length in 10..14) {
-                val latestRental = rentals.maxByOrNull { it.dibuatPada }
-                if (latestRental != null) {
-                    val docId = "${cabangId}_${noWaNorm}"
-                    val docRef = firestore.collection("customers").document(docId)
-                    val snapshot = docRef.get().await()
+        val snapshot = firestore.collection("customers")
+            .limit(1)
+            .get()
+            .await()
 
-                    if (!snapshot.exists()) {
-                        val map = mapOf(
-                            "cabangId" to cabangId,
-                            "nama" to latestRental.namaPenyewa.trim(),
-                            "noWa" to noWaNorm,
-                            "dibuatPada" to latestRental.dibuatPada,
-                            "diubahPada" to latestRental.dibuatPada
-                        )
-                        docRef.set(map).await()
-                    }
+        if (snapshot.isEmpty) {
+            val grouped = rentalsList.groupBy { normalizeNoWa(it.noWa) }
+            grouped.forEach { (noWaNorm, rentals) ->
+                if (noWaNorm.length in 10..14) {
+                    val latestRental = rentals.maxByOrNull { it.dibuatPada }
+                    if (latestRental != null) {
+                        val docId = noWaNorm
+                        val docRef = firestore.collection("customers").document(docId)
+                        val docSnap = docRef.get().await()
 
-                    rentals.forEach { r ->
-                        if (r.id.isNotEmpty() && r.customerId.isEmpty()) {
-                            firestore.collection("rentals").document(r.id)
-                                .update("customerId", docId)
+                        if (!docSnap.exists()) {
+                            val map = mapOf(
+                                "cabangId" to latestRental.cabangId,
+                                "nama" to latestRental.namaPenyewa.trim(),
+                                "noWa" to noWaNorm,
+                                "dibuatPada" to latestRental.dibuatPada,
+                                "diubahPada" to latestRental.dibuatPada
+                            )
+                            docRef.set(map).await()
+                        }
+
+                        rentals.forEach { r ->
+                            if (r.id.isNotEmpty() && r.customerId.isEmpty()) {
+                                firestore.collection("rentals").document(r.id)
+                                    .update("customerId", docId)
+                            }
                         }
                     }
                 }

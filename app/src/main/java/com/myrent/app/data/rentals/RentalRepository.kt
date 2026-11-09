@@ -1,5 +1,6 @@
 package com.myrent.app.data.rentals
 
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
 import com.myrent.app.data.customer.CustomerRepository
 import com.myrent.app.data.customer.normalizeNoWa
@@ -9,76 +10,93 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
 /**
- * Repository pengelola koleksi "rentals" di Firestore
+ * Repository pengelola koleksi "rentals" terisolasi per akun toko (toko/{uid}/rentals)
  */
 class RentalRepository(
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance(),
     private val customerRepository: CustomerRepository = CustomerRepository()
 ) {
-    fun getRentalsFlow(cabangId: String): Flow<List<Rental>> = callbackFlow {
-        if (cabangId.isEmpty()) {
+    private val currentUid: String
+        get() = auth.currentUser?.uid ?: ""
+
+    private fun getRentalsCollection(uid: String = currentUid) =
+        firestore.collection("toko").document(uid.ifEmpty { "global" }).collection("rentals")
+
+    private fun getItemsCollection(uid: String = currentUid) =
+        firestore.collection("toko").document(uid.ifEmpty { "global" }).collection("items")
+
+    fun getRentalsFlow(): Flow<List<Rental>> = callbackFlow {
+        val uid = currentUid
+        if (uid.isEmpty()) {
             trySend(emptyList())
             awaitClose { }
             return@callbackFlow
         }
 
-        val listener = firestore.collection("rentals")
-            .whereEqualTo("cabangId", cabangId)
-            .addSnapshotListener { snapshot, error ->
-                if (error != null) {
-                    close(error)
-                    return@addSnapshotListener
-                }
-                val list = snapshot?.documents?.map { doc ->
-                    Rental(
-                        id = doc.id,
-                        cabangId = doc.getString("cabangId") ?: "",
-                        itemId = doc.getString("itemId") ?: "",
-                        namaBarang = doc.getString("namaBarang") ?: "",
-                        customerId = doc.getString("customerId") ?: "",
-                        namaPenyewa = doc.getString("namaPenyewa") ?: "",
-                        noWa = doc.getString("noWa") ?: "",
-                        tanggalMulai = doc.getLong("tanggalMulai") ?: System.currentTimeMillis(),
-                        tanggalKembali = doc.getLong("tanggalKembali") ?: System.currentTimeMillis(),
-                        lamaHari = (doc.getLong("lamaHari") ?: 1L).toInt(),
-                        jumlah = (doc.getLong("jumlah") ?: 1L).toInt(),
-                        hargaTotal = doc.getLong("hargaTotal") ?: 0L,
-                        dp = doc.getLong("dp") ?: 0L,
-                        sisaBayar = doc.getLong("sisaBayar") ?: 0L,
-                        statusPembayaran = doc.getString("statusPembayaran") ?: "lunas",
-                        status = doc.getString("status") ?: "berjalan",
-                        sudahFollowUpH1 = doc.getBoolean("sudahFollowUpH1") ?: false,
-                        sudahFollowUpH = doc.getBoolean("sudahFollowUpH") ?: false,
-                        dibuatOleh = doc.getString("dibuatOleh") ?: "",
-                        dibuatPada = doc.getLong("dibuatPada") ?: System.currentTimeMillis(),
-                        dikembalikanPada = doc.getLong("dikembalikanPada"),
-                        catatan = doc.getString("catatan") ?: "",
-                        invoiceId = doc.getString("invoiceId") ?: "",
-                        metodePembayaran = doc.getString("metodePembayaran") ?: "Tunai",
-                        pelunasanPada = doc.getLong("pelunasanPada"),
-                        jumlahPelunasan = doc.getLong("jumlahPelunasan") ?: 0L
-                    )
-                }?.sortedByDescending { it.dibuatPada } ?: emptyList()
+        val userRentalsRef = getRentalsCollection(uid)
 
-                trySend(list)
+        // Migrasi data lama ke toko/{uid}/rentals jika brankas akun ini masih kosong
+        userRentalsRef.limit(1).get().addOnSuccessListener { userSnap ->
+            if (userSnap.isEmpty) {
+                firestore.collection("rentals").get().addOnSuccessListener { legacySnap ->
+                    if (!legacySnap.isEmpty) {
+                        legacySnap.documents.forEach { doc ->
+                            userRentalsRef.document(doc.id).set(doc.data ?: emptyMap<String, Any>())
+                        }
+                    }
+                }
             }
+        }
+
+        val listener = userRentalsRef.addSnapshotListener { snapshot, error ->
+            if (error != null) {
+                close(error)
+                return@addSnapshotListener
+            }
+            val list = snapshot?.documents?.map { doc ->
+                Rental(
+                    id = doc.id,
+                    cabangId = doc.getString("cabangId") ?: "",
+                    itemId = doc.getString("itemId") ?: "",
+                    namaBarang = doc.getString("namaBarang") ?: "",
+                    customerId = doc.getString("customerId") ?: "",
+                    namaPenyewa = doc.getString("namaPenyewa") ?: "",
+                    noWa = doc.getString("noWa") ?: "",
+                    tanggalMulai = doc.getLong("tanggalMulai") ?: System.currentTimeMillis(),
+                    tanggalKembali = doc.getLong("tanggalKembali") ?: System.currentTimeMillis(),
+                    lamaHari = (doc.getLong("lamaHari") ?: 1L).toInt(),
+                    jumlah = (doc.getLong("jumlah") ?: 1L).toInt(),
+                    hargaTotal = doc.getLong("hargaTotal") ?: 0L,
+                    dp = doc.getLong("dp") ?: 0L,
+                    sisaBayar = doc.getLong("sisaBayar") ?: 0L,
+                    statusPembayaran = doc.getString("statusPembayaran") ?: "lunas",
+                    status = doc.getString("status") ?: "berjalan",
+                    sudahFollowUpH1 = doc.getBoolean("sudahFollowUpH1") ?: false,
+                    sudahFollowUpH = doc.getBoolean("sudahFollowUpH") ?: false,
+                    dibuatOleh = doc.getString("dibuatOleh") ?: "",
+                    dibuatPada = doc.getLong("dibuatPada") ?: System.currentTimeMillis(),
+                    dikembalikanPada = doc.getLong("dikembalikanPada"),
+                    catatan = doc.getString("catatan") ?: "",
+                    invoiceId = doc.getString("invoiceId") ?: "",
+                    metodePembayaran = doc.getString("metodePembayaran") ?: "Tunai",
+                    pelunasanPada = doc.getLong("pelunasanPada"),
+                    jumlahPelunasan = doc.getLong("jumlahPelunasan") ?: 0L
+                )
+            }?.sortedByDescending { it.dibuatPada } ?: emptyList()
+
+            trySend(list)
+        }
         awaitClose { listener.remove() }
     }
 
-    /**
-     * Tambah sewa baru:
-     * 1. Simpan/perbarui data pelanggan ke "customers"
-     * 2. Simpan dokumen ke "rentals"
-     * 3. Kurangi stokTersedia barang di "items"
-     */
     suspend fun tambahSewa(rental: Rental, itemId: String): Result<Rental> = runCatching {
         val noWaNorm = normalizeNoWa(rental.noWa)
         val customerRes = customerRepository.upsertCustomer(
-            cabangId = rental.cabangId,
             nama = rental.namaPenyewa,
             noWaRaw = rental.noWa
         )
-        val customerId = customerRes.getOrNull()?.id ?: "${rental.cabangId}_${noWaNorm}"
+        val customerId = customerRes.getOrNull()?.id ?: noWaNorm
 
         val map = mapOf(
             "cabangId" to rental.cabangId,
@@ -107,15 +125,16 @@ class RentalRepository(
             "jumlahPelunasan" to rental.jumlahPelunasan
         )
 
-        val docRef = firestore.collection("rentals").add(map).await()
+        val docRef = getRentalsCollection().add(map).await()
 
-        val itemDoc = firestore.collection("items").document(itemId).get().await()
+        val itemDocRef = getItemsCollection().document(itemId)
+        val itemDoc = itemDocRef.get().await()
         if (itemDoc.exists()) {
             val stokTersediaSaatIni = (itemDoc.getLong("stokTersedia") ?: 1L).toInt()
             val stokTersediaBaru = (stokTersediaSaatIni - rental.jumlah).coerceAtLeast(0)
             val statusBaru = if (stokTersediaBaru == 0) "disewa" else "tersedia"
 
-            firestore.collection("items").document(itemId).update(
+            itemDocRef.update(
                 mapOf(
                     "stokTersedia" to stokTersediaBaru,
                     "status" to statusBaru
@@ -128,7 +147,7 @@ class RentalRepository(
 
     suspend fun tandaiDikembalikan(rental: Rental): Result<Unit> = runCatching {
         val now = System.currentTimeMillis()
-        firestore.collection("rentals").document(rental.id).update(
+        getRentalsCollection().document(rental.id).update(
             mapOf(
                 "status" to "selesai",
                 "dikembalikanPada" to now
@@ -136,13 +155,14 @@ class RentalRepository(
         ).await()
 
         if (rental.itemId.isNotEmpty()) {
-            val itemDoc = firestore.collection("items").document(rental.itemId).get().await()
+            val itemDocRef = getItemsCollection().document(rental.itemId)
+            val itemDoc = itemDocRef.get().await()
             if (itemDoc.exists()) {
                 val stokTotal = (itemDoc.getLong("stok") ?: 1L).toInt()
                 val stokTersediaSaatIni = (itemDoc.getLong("stokTersedia") ?: 0L).toInt()
                 val stokTersediaBaru = (stokTersediaSaatIni + rental.jumlah).coerceAtMost(stokTotal)
 
-                firestore.collection("items").document(rental.itemId).update(
+                itemDocRef.update(
                     mapOf(
                         "stokTersedia" to stokTersediaBaru,
                         "status" to "tersedia"
@@ -154,8 +174,8 @@ class RentalRepository(
 
     suspend fun updateSewa(rental: Rental): Result<Unit> = runCatching {
         val noWaNorm = normalizeNoWa(rental.noWa)
-        if (rental.cabangId.isNotEmpty() && rental.namaPenyewa.isNotEmpty()) {
-            customerRepository.upsertCustomer(rental.cabangId, rental.namaPenyewa, rental.noWa)
+        if (rental.namaPenyewa.isNotEmpty()) {
+            customerRepository.upsertCustomer(rental.namaPenyewa, rental.noWa)
         }
 
         val map = mapOf(
@@ -174,19 +194,20 @@ class RentalRepository(
             "pelunasanPada" to rental.pelunasanPada,
             "jumlahPelunasan" to rental.jumlahPelunasan
         )
-        firestore.collection("rentals").document(rental.id).update(map).await()
+        getRentalsCollection().document(rental.id).update(map).await()
     }
 
     suspend fun hapusSewa(rental: Rental): Result<Unit> = runCatching {
-        firestore.collection("rentals").document(rental.id).delete().await()
+        getRentalsCollection().document(rental.id).delete().await()
         if (rental.itemId.isNotEmpty() && rental.status == "berjalan") {
-            val itemDoc = firestore.collection("items").document(rental.itemId).get().await()
+            val itemDocRef = getItemsCollection().document(rental.itemId)
+            val itemDoc = itemDocRef.get().await()
             if (itemDoc.exists()) {
                 val stokTotal = (itemDoc.getLong("stok") ?: 1L).toInt()
                 val stokTersediaSaatIni = (itemDoc.getLong("stokTersedia") ?: 0L).toInt()
                 val stokTersediaBaru = (stokTersediaSaatIni + rental.jumlah).coerceAtMost(stokTotal)
 
-                firestore.collection("items").document(rental.itemId).update(
+                itemDocRef.update(
                     mapOf(
                         "stokTersedia" to stokTersediaBaru,
                         "status" to "tersedia"

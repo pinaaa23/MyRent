@@ -2,12 +2,9 @@ package com.myrent.app.ui.report
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.google.firebase.auth.FirebaseAuth
 import com.google.firebase.firestore.FirebaseFirestore
-import com.myrent.app.data.auth.AuthRepository
-import com.myrent.app.data.cabang.Cabang
-import com.myrent.app.data.cabang.CabangRepository
 import com.myrent.app.data.items.Item
-import com.myrent.app.data.items.ItemRepository
 import com.myrent.app.data.rentals.Rental
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -29,8 +26,6 @@ data class CategoryStat(
 data class ReportUiState(
     val isLoading: Boolean = false,
     val errorMessage: String? = null,
-    val cabangList: List<Cabang> = emptyList(),
-    val selectedCabangId: String = "",       // "" = "Semua cabang"
     val selectedPeriodType: PeriodType = PeriodType.HARI,
     val periodOffset: Int = 0,               // 0 = current
     val periodRange: PeriodRange? = null,
@@ -48,12 +43,10 @@ data class ReportUiState(
 )
 
 /**
- * ViewModel pengelola Data Laporan Omzet, Grafik, Kategori, & Statistik Sewa
+ * ViewModel pengelola Data Laporan Omzet, Grafik, Kategori, & Statistik Sewa (Terisolasi per Toko)
  */
 class ReportViewModel(
-    private val authRepository: AuthRepository = AuthRepository(),
-    private val cabangRepository: CabangRepository = CabangRepository(),
-    private val itemRepository: ItemRepository = ItemRepository(),
+    private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) : ViewModel() {
 
@@ -62,47 +55,40 @@ class ReportViewModel(
 
     private var cachedItems: List<Item> = emptyList()
 
+    private val currentUid: String
+        get() = auth.currentUser?.uid ?: ""
+
     init {
         initInitialState()
     }
 
     private fun initInitialState() {
-        viewModelScope.launch {
-            _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
-
-            val profileRes = authRepository.getUserProfile()
-            val userCabangId = profileRes.getOrNull()?.cabangId ?: ""
-
-            val cabangListRes = cabangRepository.getDaftarCabang()
-            val cabangList = cabangListRes.getOrDefault(emptyList())
-
-            val periodRange = ReportPeriodHelper.calculatePeriodRange(PeriodType.HARI, 0)
-
-            _uiState.value = _uiState.value.copy(
-                cabangList = cabangList,
-                selectedCabangId = userCabangId,
-                selectedPeriodType = PeriodType.HARI,
-                periodOffset = 0,
-                periodRange = periodRange
-            )
-
-            loadReportData()
-        }
+        val periodRange = ReportPeriodHelper.calculatePeriodRange(PeriodType.HARI, 0)
+        _uiState.value = _uiState.value.copy(
+            selectedPeriodType = PeriodType.HARI,
+            periodOffset = 0,
+            periodRange = periodRange
+        )
+        loadReportData()
     }
 
     fun loadReportData() {
         viewModelScope.launch {
             _uiState.value = _uiState.value.copy(isLoading = true, errorMessage = null)
 
+            val uid = currentUid
+            if (uid.isEmpty()) {
+                _uiState.value = _uiState.value.copy(isLoading = false)
+                return@launch
+            }
+
             val state = _uiState.value
             val periodType = state.selectedPeriodType
             val offset = state.periodOffset
-            val selectedCabangId = state.selectedCabangId
 
             val range = ReportPeriodHelper.calculatePeriodRange(periodType, offset)
 
             try {
-                // Tentukan rentang query tanggal
                 val chartRange = if (periodType == PeriodType.HARI) {
                     val bars = ReportPeriodHelper.generateChartBars(periodType, range)
                     val firstBarStart = bars.firstOrNull()?.startMs ?: range.startMs
@@ -111,8 +97,8 @@ class ReportViewModel(
                     Pair(range.startMs, range.endMs)
                 }
 
-                // Query Firestore berdasarkan SINGLE range 'dibuatPada'
-                val querySnapshot = firestore.collection("rentals")
+                val rentalsRef = firestore.collection("toko").document(uid).collection("rentals")
+                val querySnapshot = rentalsRef
                     .whereGreaterThanOrEqualTo("dibuatPada", chartRange.first)
                     .whereLessThanOrEqualTo("dibuatPada", chartRange.second)
                     .get()
@@ -142,57 +128,29 @@ class ReportViewModel(
                     )
                 }
 
-                // Filter cabangId di sisi Kotlin
-                val cabangRentals = if (selectedCabangId.isEmpty()) {
-                    rawRentals
-                } else {
-                    rawRentals.filter { it.cabangId == selectedCabangId }
+                val itemsSnapshot = firestore.collection("toko").document(uid).collection("items").get().await()
+                cachedItems = itemsSnapshot.documents.map { doc ->
+                    Item(
+                        id = doc.id,
+                        cabangId = doc.getString("cabangId") ?: "",
+                        nama = doc.getString("nama") ?: "",
+                        kategori = doc.getString("kategori") ?: ""
+                    )
                 }
 
-                // Ambil data items untuk memetakan kategori jika diperlukan
-                if (selectedCabangId.isNotEmpty()) {
-                    val itemSnapshot = firestore.collection("items")
-                        .whereEqualTo("cabangId", selectedCabangId)
-                        .get()
-                        .await()
+                val rentalsInPeriod = rawRentals.filter { it.dibuatPada in range.startMs..range.endMs }
 
-                    cachedItems = itemSnapshot.documents.map { doc ->
-                        Item(
-                            id = doc.id,
-                            cabangId = doc.getString("cabangId") ?: "",
-                            nama = doc.getString("nama") ?: "",
-                            kategori = doc.getString("kategori") ?: ""
-                        )
-                    }
-                } else {
-                    val itemSnapshot = firestore.collection("items").get().await()
-                    cachedItems = itemSnapshot.documents.map { doc ->
-                        Item(
-                            id = doc.id,
-                            cabangId = doc.getString("cabangId") ?: "",
-                            nama = doc.getString("nama") ?: "",
-                            kategori = doc.getString("kategori") ?: ""
-                        )
-                    }
-                }
-
-                // Filter transaksi yang benar-benar masuk dalam rentang periode terpilih
-                val rentalsInPeriod = cabangRentals.filter { it.dibuatPada in range.startMs..range.endMs }
-
-                // Hitung statistik utama
                 val omzetKotor = rentalsInPeriod.sumOf { it.hargaTotal }
                 val sudahDiterima = rentalsInPeriod.sumOf { it.hargaTotal - it.sisaBayar }
                 val belumDibayar = rentalsInPeriod.sumOf { it.sisaBayar }
                 val totalTransaksi = rentalsInPeriod.size
 
-                // Hitung batang grafik
                 val initialBars = ReportPeriodHelper.generateChartBars(periodType, range)
                 val populatedBars = initialBars.map { bar ->
-                    val barRentals = cabangRentals.filter { it.dibuatPada in bar.startMs..bar.endMs }
+                    val barRentals = rawRentals.filter { it.dibuatPada in bar.startMs..bar.endMs }
                     bar.copy(value = barRentals.sumOf { it.hargaTotal })
                 }
 
-                // Top 5 barang sering disewa
                 val topItems = rentalsInPeriod
                     .groupBy { it.namaBarang }
                     .map { (nama, list) ->
@@ -204,7 +162,6 @@ class ReportViewModel(
                     .sortedByDescending { it.jumlahSewaCount }
                     .take(5)
 
-                // Omzet per Kategori
                 val itemCategoryMap = cachedItems.associate { it.id to it.kategori }
                 val categoryStats = rentalsInPeriod
                     .groupBy { rental ->
@@ -250,11 +207,6 @@ class ReportViewModel(
         }
     }
 
-    fun selectCabang(cabangId: String) {
-        _uiState.value = _uiState.value.copy(selectedCabangId = cabangId)
-        loadReportData()
-    }
-
     fun selectPeriodType(periodType: PeriodType) {
         val range = ReportPeriodHelper.calculatePeriodRange(periodType, 0)
         _uiState.value = _uiState.value.copy(
@@ -267,7 +219,7 @@ class ReportViewModel(
 
     fun navigatePeriodOffset(delta: Int) {
         val newOffset = _uiState.value.periodOffset + delta
-        if (newOffset > 0) return // Panah kanan nonaktif jika sudah di periode saat ini
+        if (newOffset > 0) return
 
         val periodType = _uiState.value.selectedPeriodType
         val range = ReportPeriodHelper.calculatePeriodRange(periodType, newOffset)

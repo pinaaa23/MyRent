@@ -1,0 +1,165 @@
+================================================================================
+                    PRODUCT REQUIREMENT DOCUMENT (PRD) - MYRENT
+               Aplikasi Manajemen Sewa Barang (Android, Kotlin + Firebase)
+                                 Versi Terbaru (Updated)
+================================================================================
+
+1. INFORMASI UMUM PROYEK
+--------------------------------------------------------------------------------
+- Nama Aplikasi     : MyRent
+- Platform          : Android Application
+- Bahasa & UI       : Kotlin, Jetpack Compose (Material 3)
+- Arsitektur        : MVVM (Model-View-ViewModel), Coroutines, StateFlow, Navigation Compose
+- Database & Auth   : Firebase Authentication, Cloud Firestore (Isolasi Data Per Toko)
+- Reminders         : WorkManager (Local Notification Harian Jam 08:00 WIB)
+- Tema Warna        : Custom Dark Theme
+                      * Background        : #121212
+                      * Surface           : #1E1E1E
+                      * SurfaceVariant    : #2A2A2A
+                      * Text Primary      : #F2EFE8
+                      * Text Secondary    : #A8A8A8
+                      * Accent Gold       : #C9A96A
+
+
+2. MODEL BISNIS & ARSITEKTUR AKUN (1 AKUN = 1 TOKO MANDIRI)
+--------------------------------------------------------------------------------
+- Setiap pendaftaran akun baru membuat 1 Toko Mandiri yang terpisah secara total di Cloud Firestore.
+- Data disimpan di bawah brankas terisolasi jalur: `toko/{uid}/...` (di mana {uid} adalah ID Unik Pengguna Firebase Auth).
+- Pendaftaran akun membutuhkan:
+  1. Nama Lengkap Pemilik
+  2. Nama Toko / Cabang
+  3. Email
+  4. Kata Sandi & Konfirmasi Kata Sandi
+- Verifikasi Email wajib dilakukan via tautan yang dikirimkan Firebase Auth ke email pendaftar.
+- Pengguna baru memulai toko dengan data bersih/kosong tanpa dapat melihat data toko lain.
+- Migrasi data lama dilakukan secara otomatis & aman tanpa menghapus data historis.
+
+
+3. FITUR UTAMA & 5 MENU NAVIGASI UTAMA
+--------------------------------------------------------------------------------
+
+3.1. BERANDA (DASHBOARD & REMINDER FOLLOW-UP)
+- 3 Card Ringkasan Utama:
+  1. Sewa Berjalan (Jumlah transaksi sewa yang sedang aktif/berjalan).
+  2. Jatuh Tempo Hari Ini (Jumlah sewa yang tanggal pengembaliannya hari ini).
+  3. Omzet Hari Ini (Uang Masuk Riil Hari Ini: DP sewa baru hari ini + Pelunasan sisa bayar hari ini).
+- Daftar "Perlu di-Follow Up":
+  - Memfilter transaksi sewa berjalan dengan label "H-1" (Hampir Jatuh Tempo) dan "HARI H" (Jatuh Tempo Hari Ini).
+  - Tombol "Kirim WA Nota" / "Kirim WA Follow-Up" langsung membuka obrolan WhatsApp dengan template pesan resmi.
+  - Penanda status agar tidak terkirim ganda.
+- Reminder Latar Belakang:
+  - WorkManager mengecek jadwal pengembalian setiap hari jam 08:00 WIB dan memicu notifikasi lokal di status bar HP.
+
+3.2. SEWA (TRANSAKSI SEWA, PEMBAYARAN, & NOTA)
+- Alur Sewa Baru 2 Langkah:
+  * Langkah 1 (Pilih Barang): Layar penuh memilih barang dari Katalog (Grid 2 kolom, foto, nama, ukuran, stok tersedia, harga, filter kategori & pencarian). Barang stok 0 atau perbaikan tampil pudar & tidak bisa diketuk. Barang terpilih diberi garis aksen emas. Tombol "Pilih" di bagian bawah.
+  * Langkah 2 (Form Sewa): Tampilan Bottom Sheet dengan Kartu Ringkasan Barang Terpilih + Tautan "Ganti". Nama & Nomor WA Penyewa dilengkapi Saran Otomatis (Auto-complete) dari data pelanggan terdaftar. Input Tanggal Mulai/Kembali, Durasi, Jumlah Disewa (dibatasi <= stok tersedia), Total Biaya (Auto/Manual berformat Rp), Uang Muka/DP (dibatasi <= Total Biaya), Sisa Pembayaran (Auto), dan Catatan/Jaminan.
+- Validasi Sebelum Pembayaran:
+  - Peringatan merah langsung menahan jika Jumlah Disewa > Stok Tersedia atau DP > Total Biaya.
+- Layar Pembayaran Full-Screen:
+  - Pilihan metode: Tunai (Cash) dan QRIS.
+  - Tampilan Khusus Full-Screen QRIS: Menampilkan nama toko, nominal bayar besar, dan Barcode QR Code 240dp presisi tinggi untuk scan e-wallet / m-banking.
+- Struk Nota Transaksi (Thermal Receipt):
+  - Tampilan struk termal kasir putih bersih: Kop Toko/Alamat/WA, No Invoice (INV-YYYYMMDD-HHMMSS), Nama Kasir, Nama Pelanggan, Periode Sewa, Rincian Unit Barang, Total, DP, Sisa, Status Lunas/Belum Lunas, Jaminan, & Catatan Bawah.
+  - 3 Tombol Aksi: "Kirim WA Nota" (pesan invoice WhatsApp), "Cetak Nota" (printer termal / PDF Android), dan "Kembali ke Dashboard".
+- Fitur Pelunasan Pembayaran:
+  - Pada Detail Sewa, jika Sisa Pembayaran > Rp 0, terdapat tombol aktif "Pelunasan Pembayaran (Sisa Rp XX.XXX)" yang membuka Layar Pembayaran Full-Screen.
+  - Jika pembayaran sudah Lunas, tombol otomatis mati/disabled bertuliskan "Pembayaran Lunas" (centang hijau).
+
+3.3. KATALOG (MANAJEMEN BARANG & STOK)
+- Grid 2 Kolom Barang dengan Foto Terkompresi Base64 (maksimal 800px, JPEG 70%).
+- Manajemen Stok: Input Jumlah Stok Total (`stok`) dan Stok Tersedia (`stokTersedia`).
+- Otomatisasi Stok: Stok berkurang otomatis saat sewa dibuat dan bertambah otomatis saat barang dikembalikan.
+- Filter Chips Kategori & Kolom Pencarian Nama Barang.
+- Bottom Sheet Tambah/Edit/Hapus Barang. Barang sedang disewa dilindungi agar tidak dapat dihapus.
+
+3.4. PENYEWA (DATA PELANGGAN & RIWAYAT)
+- Kolom Pencarian Nama / Nomor WA.
+- Normalisasi Nomor WA: Otomatis dibersihkan menjadi angka awalan "0" (10-14 digit) dan unik per toko.
+- Deduplikasi Otomatis: Mencegah duplikat pelanggan secara self-healing.
+- Kartu Penyewa: Menampilkan Nama, No WA, Jumlah Transaksi Sewa, dan Tanggal Terakhir Menyewa.
+- Bottom Sheet Detail Penyewa:
+  - Tombol "Chat WhatsApp" (membuka wa.me/62...).
+  - Tombol "Edit Penyewa" (Dialog ubah nama/WA dengan validasi & cegah nomor kembar).
+  - Riwayat Sewa Lengkap milik penyewa tersebut (nama barang, periode, status, total biaya).
+
+3.5. LAPORAN (ANALISIS OMZET & STATISTIK)
+- Zona Waktu Asia/Jakarta (WIB), Minggu dimulai hari Senin.
+- Pilihan Periode: Hari, Minggu, Bulan, Tahun.
+- Navigasi Periode: Tombol panah kiri/kanan, label periode Indonesia, dan tombol shortcut reset ke periode saat ini ("Hari ini", "Minggu ini", dll).
+- Kartu Utama Metrics: Omzet Kotor, Sudah Diterima, Belum Dibayar, dan Jumlah Transaksi.
+- Grafik Batang Custom Canvas (TANPA Library Eksternal):
+  - 7 hari terakhir (Hari), Senin-Minggu (Minggu), 5 rentang minggu (Bulan), 12 bulan (Tahun).
+  - Tooltip interaktif saat batang diketuk (menampilkan rentang tanggal & nominal Rupiah).
+- Section "Barang Paling Sering Disewa (Top 5)".
+- Section "Omzet per Kategori" dengan progress bar proporsi.
+- Section "Daftar Transaksi" (Top 10 sewa terbaru + Dialog "Lihat Semua").
+
+3.6. PENGATURAN
+- Kartu Profil Pengguna: Nama Pemilik, Nama Toko / Cabang, dan Email.
+- Dialog Kelola Kategori: Tambah, Edit, dan Hapus Kategori (dengan proteksi jika kategori masih digunakan oleh barang).
+- Konfirmasi Keluar (Logout).
+
+
+4. STRUKTUR DATABASE FIRESTORE (`toko/{uid}/...`)
+--------------------------------------------------------------------------------
+1. `users/{uid}` (Profil Akun Toko)
+   - uid             : String
+   - nama            : String (Nama Pemilik)
+   - namaToko        : String (Nama Toko / Cabang)
+   - email           : String
+   - dibuatPada      : Long
+
+2. `toko/{uid}/items` (Katalog Barang & Stok)
+   - id              : String
+   - nama            : String
+   - kategori        : String
+   - ukuran          : String
+   - hargaSewa       : Long
+   - stok            : Int
+   - stokTersedia    : Int
+   - fotoBase64      : String
+   - status          : String ("tersedia", "disewa", "perbaikan")
+   - catatan         : String
+   - dibuatPada      : Long
+
+3. `toko/{uid}/kategori` (Kategori Barang)
+   - id              : String
+   - nama            : String
+
+4. `toko/{uid}/rentals` (Transaksi Sewa)
+   - id              : String
+   - itemId          : String
+   - namaBarang      : String
+   - customerId      : String
+   - namaPenyewa     : String
+   - noWa            : String
+   - tanggalMulai    : Long
+   - tanggalKembali  : Long
+   - lamaHari        : Int
+   - jumlah          : Int
+   - hargaTotal      : Long
+   - dp              : Long
+   - sisaBayar       : Long
+   - statusPembayaran: String ("lunas", "belum_lunas")
+   - status          : String ("berjalan", "selesai", "terlambat")
+   - invoiceId       : String
+   - metodePembayaran: String ("Tunai", "QRIS")
+   - pelunasanPada   : Long?
+   - jumlahPelunasan : Long
+   - catatan         : String
+   - dibuatPada      : Long
+
+5. `toko/{uid}/customers` (Data Pelanggan)
+   - id              : String
+   - nama            : String
+   - noWa            : String
+   - dibuatPada      : Long
+   - diubahPada      : Long
+
+
+5. KUALITAS & TESTING
+--------------------------------------------------------------------------------
+- Unit Test JUnit (`ReportPeriodTest.kt`): Memverifikasi kalkulasi batas minggu mulai Senin, tahun kabisat (Februari 2024 vs 2025), rentang bulan, dan tahun (100% PASS).
+- Kecepatan Simpan: Pengolahan kompresi foto dan transaksi database dijalankan di latar belakang (`Dispatchers.IO`) untuk respon instan.
+================================================================================

@@ -1,5 +1,9 @@
 [
     {
+        "merged": "com.myrent.app-debug-75:/xml_file_paths.xml.flat",
+        "source": "com.myrent.app-main-77:/xml/file_paths.xml"
+    },
+    {
         "merged": "com.myrent.app-debug-75:/drawable_ic_launcher_foreground.xml.flat",
         "source": "com.myrent.app-main-77:/drawable/ic_launcher_foreground.xml"
     },

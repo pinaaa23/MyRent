@@ -4,7 +4,6 @@ import android.content.Context
 import android.net.Uri
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.myrent.app.data.auth.AuthRepository
 import com.myrent.app.data.foto.FotoRepository
 import com.myrent.app.data.items.Item
 import com.myrent.app.data.items.ItemRepository
@@ -26,10 +25,9 @@ sealed class CatalogUiState {
 }
 
 /**
- * ViewModel untuk mengelola data Katalog, Stok Barang, dan formulir Tambah/Edit barang
+ * ViewModel untuk mengelola data Katalog, Stok Barang, dan formulir Tambah/Edit barang (Tanpa Filter Cabang)
  */
 class CatalogViewModel(
-    private val authRepository: AuthRepository = AuthRepository(),
     private val itemRepository: ItemRepository = ItemRepository(),
     private val kategoriRepository: KategoriRepository = KategoriRepository(),
     private val fotoRepository: FotoRepository = FotoRepository()
@@ -37,9 +35,6 @@ class CatalogViewModel(
 
     private val _uiState = MutableStateFlow<CatalogUiState>(CatalogUiState.Idle)
     val uiState: StateFlow<CatalogUiState> = _uiState.asStateFlow()
-
-    private val _userCabangId = MutableStateFlow("")
-    val userCabangId: StateFlow<String> = _userCabangId.asStateFlow()
 
     private val _selectedKategori = MutableStateFlow("Semua")
     val selectedKategori: StateFlow<String> = _selectedKategori.asStateFlow()
@@ -55,20 +50,13 @@ class CatalogViewModel(
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     init {
-        loadUserCabangAndItems()
+        loadItems()
     }
 
-    private fun loadUserCabangAndItems() {
+    private fun loadItems() {
         viewModelScope.launch {
-            val profileResult = authRepository.getUserProfile()
-            profileResult.onSuccess { userDoc ->
-                val cabangId = userDoc.cabangId
-                _userCabangId.value = cabangId
-                if (cabangId.isNotEmpty()) {
-                    itemRepository.getItemsFlow(cabangId).collect { itemList ->
-                        _allItems.value = itemList
-                    }
-                }
+            itemRepository.getItemsFlow().collect { itemList ->
+                _allItems.value = itemList
             }
         }
     }
@@ -111,23 +99,22 @@ class CatalogViewModel(
         viewModelScope.launch {
             _uiState.value = CatalogUiState.Loading
 
-            // Mengompres foto jika pengguna memilih foto baru dari Photo Picker
+            // Mengompres foto jika pengguna memilih foto baru
             val finalBase64 = if (newPhotoUri != null) {
                 fotoRepository.compressUriToBase64(context, newPhotoUri) ?: fotoBase64Existing
             } else {
                 fotoBase64Existing
             }
 
-            val cabangId = _userCabangId.value
             val itemToSave = Item(
                 id = id,
-                cabangId = cabangId,
+                cabangId = "",
                 nama = nama.trim(),
                 kategori = kategori.trim(),
                 ukuran = ukuran.trim(),
                 hargaSewa = hargaSewa,
                 stok = stok,
-                stokTersedia = if (id.isEmpty()) stok else stok, // Disesuaikan saat disimpan
+                stokTersedia = if (id.isEmpty()) stok else stok,
                 fotoBase64 = finalBase64,
                 status = status,
                 catatan = catatan.trim(),

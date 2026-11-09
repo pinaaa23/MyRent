@@ -1,160 +1,142 @@
 package com.myrent.app.ui.auth
 
 import android.util.Patterns
+import androidx.annotation.StringRes
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.google.firebase.FirebaseNetworkException
-import com.google.firebase.FirebaseTooManyRequestsException
 import com.google.firebase.auth.FirebaseAuthInvalidCredentialsException
-import com.google.firebase.auth.FirebaseAuthInvalidUserException
 import com.google.firebase.auth.FirebaseAuthUserCollisionException
+import com.google.firebase.auth.FirebaseUser
 import com.myrent.app.R
 import com.myrent.app.data.auth.AuthRepository
-import com.myrent.app.data.cabang.Cabang
-import com.myrent.app.data.cabang.CabangRepository
-import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-/**
- * State umum untuk UI Otentikasi
- */
 sealed class AuthUiState {
     object Idle : AuthUiState()
     object Loading : AuthUiState()
-    data class Success(val messageResId: Int? = null) : AuthUiState()
-    data class Error(val messageResId: Int) : AuthUiState()
+    data class Success(@StringRes val messageResId: Int? = null) : AuthUiState()
+    data class Error(@StringRes val messageResId: Int) : AuthUiState()
 }
 
 /**
- * ViewModel pengelola aliran data dan logika bisnis Otentikasi & Akun
+ * ViewModel untuk mengelola alur Otentikasi (Login, Register, Verifikasi Email, Lupa Password)
  */
 class AuthViewModel(
-    private val authRepository: AuthRepository = AuthRepository(),
-    private val cabangRepository: CabangRepository = CabangRepository()
+    private val authRepository: AuthRepository = AuthRepository()
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow<AuthUiState>(AuthUiState.Idle)
     val uiState: StateFlow<AuthUiState> = _uiState.asStateFlow()
 
-    private val _daftarCabangState = MutableStateFlow<List<Cabang>>(emptyList())
-    val daftarCabangState: StateFlow<List<Cabang>> = _daftarCabangState.asStateFlow()
-
-    private val _isLoadingCabang = MutableStateFlow(false)
-    val isLoadingCabang: StateFlow<Boolean> = _isLoadingCabang.asStateFlow()
-
     private val _resendCooldown = MutableStateFlow(0)
     val resendCooldown: StateFlow<Int> = _resendCooldown.asStateFlow()
 
-    private var cooldownJob: Job? = null
+    val currentUser: FirebaseUser?
+        get() = authRepository.currentUser
 
-    init {
-        loadDaftarCabang()
+    fun getCurrentUserEmail(): String = currentUser?.email ?: ""
+
+    /**
+     * Memeriksa status login dan verifikasi email pengguna
+     */
+    suspend fun isUserLoggedInAndVerified(): Pair<Boolean, Boolean> {
+        val user = authRepository.currentUser ?: return Pair(false, false)
+        val reloadedRes = authRepository.reloadUser()
+        val isVerified = reloadedRes.getOrNull()?.isEmailVerified ?: user.isEmailVerified
+        return Pair(true, isVerified)
     }
 
     /**
-     * Memuat daftar cabang dari Firestore untuk pendaftaran
+     * Alur Login Pengguna dengan Email dan Kata Sandi
      */
-    fun loadDaftarCabang() {
-        viewModelScope.launch {
-            _isLoadingCabang.value = true
-            val result = cabangRepository.getDaftarCabang()
-            result.onSuccess { cabangList ->
-                _daftarCabangState.value = cabangList
-            }.onFailure {
-                _daftarCabangState.value = emptyList()
-            }
-            _isLoadingCabang.value = false
-        }
-    }
+    fun login(
+        emailInput: String,
+        passwordInput: String,
+        onSuccess: (isVerified: Boolean) -> Unit
+    ) {
+        val email = emailInput.trim()
+        val password = passwordInput.trim()
 
-    /**
-     * Login pengguna
-     */
-    fun login(email: String, password: String, onSuccess: (isVerified: Boolean) -> Unit) {
-        val emailTrim = email.trim()
-        val passwordTrim = password.trim()
-
-        if (emailTrim.isEmpty() || passwordTrim.isEmpty()) {
+        if (email.isEmpty() || password.isEmpty()) {
             _uiState.value = AuthUiState.Error(R.string.error_empty_field)
-            return
-        }
-        if (!Patterns.EMAIL_ADDRESS.matcher(emailTrim).matches()) {
-            _uiState.value = AuthUiState.Error(R.string.error_invalid_email)
             return
         }
 
         viewModelScope.launch {
             _uiState.value = AuthUiState.Loading
-            val result = authRepository.login(emailTrim, passwordTrim)
+            val result = authRepository.login(email, password)
+
             result.onSuccess { user ->
+                val isVerified = user.isEmailVerified
                 _uiState.value = AuthUiState.Idle
-                onSuccess(user.isEmailVerified)
+                onSuccess(isVerified)
             }.onFailure { exception ->
-                _uiState.value = AuthUiState.Error(mapFirebaseException(exception))
+                _uiState.value = AuthUiState.Error(mapFirebaseErrorToResId(exception))
             }
         }
     }
 
     /**
-     * Pendaftaran akun baru
+     * Alur Pendaftaran Akun Baru (1 Akun = 1 Toko)
      */
-    fun register(
-        nama: String,
-        email: String,
-        password: String,
-        confirmPassword: String,
-        selectedCabang: Cabang?,
+    fun registerUser(
+        fullNameInput: String,
+        storeNameInput: String,
+        emailInput: String,
+        passwordInput: String,
+        confirmPasswordInput: String,
         onSuccess: () -> Unit
     ) {
-        val namaTrim = nama.trim()
-        val emailTrim = email.trim()
-        val passwordTrim = password.trim()
-        val confirmTrim = confirmPassword.trim()
+        val fullName = fullNameInput.trim()
+        val storeName = storeNameInput.trim()
+        val email = emailInput.trim()
+        val password = passwordInput.trim()
+        val confirmPassword = confirmPasswordInput.trim()
 
-        if (namaTrim.isEmpty() || emailTrim.isEmpty() || passwordTrim.isEmpty() || confirmTrim.isEmpty()) {
+        if (fullName.isEmpty() || storeName.isEmpty() || email.isEmpty() || password.isEmpty() || confirmPassword.isEmpty()) {
             _uiState.value = AuthUiState.Error(R.string.error_empty_field)
             return
         }
-        if (!Patterns.EMAIL_ADDRESS.matcher(emailTrim).matches()) {
+
+        if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
             _uiState.value = AuthUiState.Error(R.string.error_invalid_email)
             return
         }
-        if (passwordTrim.length < 6) {
+
+        if (password.length < 6) {
             _uiState.value = AuthUiState.Error(R.string.error_short_password)
             return
         }
-        if (passwordTrim != confirmTrim) {
+
+        if (password != confirmPassword) {
             _uiState.value = AuthUiState.Error(R.string.error_password_mismatch)
-            return
-        }
-        if (selectedCabang == null) {
-            _uiState.value = AuthUiState.Error(R.string.error_select_cabang)
             return
         }
 
         viewModelScope.launch {
             _uiState.value = AuthUiState.Loading
             val result = authRepository.register(
-                nama = namaTrim,
-                email = emailTrim,
-                password = passwordTrim,
-                cabangId = selectedCabang.id
+                nama = fullName,
+                namaToko = storeName,
+                email = email,
+                password = password
             )
+
             result.onSuccess {
                 _uiState.value = AuthUiState.Idle
                 onSuccess()
             }.onFailure { exception ->
-                _uiState.value = AuthUiState.Error(mapFirebaseException(exception))
+                _uiState.value = AuthUiState.Error(mapFirebaseErrorToResId(exception))
             }
         }
     }
 
     /**
-     * Kirim ulang email verifikasi dengan cooldown 30 detik
+     * Mengirim ulang email verifikasi
      */
     fun resendEmailVerification() {
         if (_resendCooldown.value > 0) return
@@ -162,117 +144,106 @@ class AuthViewModel(
         viewModelScope.launch {
             _uiState.value = AuthUiState.Loading
             val result = authRepository.resendEmailVerification()
+
             result.onSuccess {
                 _uiState.value = AuthUiState.Success(R.string.email_sent_success)
-                startCooldownTimer()
+                startResendCooldown()
             }.onFailure { exception ->
-                _uiState.value = AuthUiState.Error(mapFirebaseException(exception))
+                _uiState.value = AuthUiState.Error(mapFirebaseErrorToResId(exception))
             }
         }
     }
 
-    /**
-     * Memeriksa verifikasi email pengguna saat menekan "Saya sudah verifikasi" secara manual (menampilkan indikator loading)
-     */
-    fun checkEmailVerificationStatus(onVerified: () -> Unit, onNotVerified: () -> Unit) {
+    private fun startResendCooldown() {
         viewModelScope.launch {
-            _uiState.value = AuthUiState.Loading
-            val result = authRepository.reloadUser()
-            result.onSuccess { user ->
-                _uiState.value = AuthUiState.Idle
-                if (user.isEmailVerified) {
-                    onVerified()
-                } else {
-                    onNotVerified()
-                }
-            }.onFailure { exception ->
-                _uiState.value = AuthUiState.Error(mapFirebaseException(exception))
+            _resendCooldown.value = 30
+            while (_resendCooldown.value > 0) {
+                delay(1000)
+                _resendCooldown.value -= 1
             }
         }
     }
 
     /**
-     * Memeriksa verifikasi email pengguna secara SILENT (latar belakang) tanpa mengubah uiState (mencegah flickering/berkedip)
+     * Pengecekan status verifikasi email secara silent di background
      */
     fun checkEmailVerificationStatusSilent(onVerified: () -> Unit) {
         viewModelScope.launch {
-            val result = authRepository.reloadUser()
-            result.onSuccess { user ->
-                if (user.isEmailVerified) {
-                    _uiState.value = AuthUiState.Idle
-                    onVerified()
-                }
+            val reloadedRes = authRepository.reloadUser()
+            val isVerified = reloadedRes.getOrNull()?.isEmailVerified ?: false
+            if (isVerified) {
+                onVerified()
             }
         }
     }
 
     /**
-     * Kirim tautan reset kata sandi
+     * Pengecekan status verifikasi email secara manual
      */
-    fun sendPasswordResetEmail(email: String, onSuccess: () -> Unit) {
-        val emailTrim = email.trim()
-        if (emailTrim.isEmpty()) {
+    fun checkEmailVerificationStatus(
+        onVerified: () -> Unit,
+        onNotVerified: () -> Unit
+    ) {
+        viewModelScope.launch {
+            _uiState.value = AuthUiState.Loading
+            val reloadedRes = authRepository.reloadUser()
+            val isVerified = reloadedRes.getOrNull()?.isEmailVerified ?: false
+
+            _uiState.value = AuthUiState.Idle
+            if (isVerified) {
+                onVerified()
+            } else {
+                _uiState.value = AuthUiState.Error(R.string.email_not_verified)
+                onNotVerified()
+            }
+        }
+    }
+
+    /**
+     * Mengirimkan email reset kata sandi
+     */
+    fun sendPasswordResetEmail(
+        emailInput: String,
+        onSuccess: () -> Unit
+    ) {
+        val email = emailInput.trim()
+
+        if (email.isEmpty()) {
             _uiState.value = AuthUiState.Error(R.string.error_empty_field)
             return
         }
-        if (!Patterns.EMAIL_ADDRESS.matcher(emailTrim).matches()) {
+
+        if (!Patterns.EMAIL_ADDRESS.matcher(email).matches()) {
             _uiState.value = AuthUiState.Error(R.string.error_invalid_email)
             return
         }
 
         viewModelScope.launch {
             _uiState.value = AuthUiState.Loading
-            val result = authRepository.sendPasswordResetEmail(emailTrim)
+            val result = authRepository.sendPasswordResetEmail(email)
+
             result.onSuccess {
                 _uiState.value = AuthUiState.Success(R.string.reset_link_sent_success)
                 onSuccess()
             }.onFailure { exception ->
-                _uiState.value = AuthUiState.Error(mapFirebaseException(exception))
+                _uiState.value = AuthUiState.Error(mapFirebaseErrorToResId(exception))
             }
         }
     }
 
-    /**
-     * Logout pengguna
-     */
     fun logout() {
         authRepository.logout()
-    }
-
-    fun getCurrentUserEmail(): String {
-        return authRepository.currentUser?.email ?: ""
-    }
-
-    fun isUserLoggedInAndVerified(): Pair<Boolean, Boolean> {
-        val user = authRepository.currentUser
-        return Pair(user != null, user?.isEmailVerified == true)
+        _uiState.value = AuthUiState.Idle
     }
 
     fun resetUiState() {
         _uiState.value = AuthUiState.Idle
     }
 
-    private fun startCooldownTimer() {
-        cooldownJob?.cancel()
-        cooldownJob = viewModelScope.launch {
-            for (i in 30 downTo 1) {
-                _resendCooldown.value = i
-                delay(1000)
-            }
-            _resendCooldown.value = 0
-        }
-    }
-
-    /**
-     * Memetakan exception Firebase ke teks pesan Bahasa Indonesia
-     */
-    private fun mapFirebaseException(exception: Throwable): Int {
+    private fun mapFirebaseErrorToResId(exception: Throwable): Int {
         return when (exception) {
             is FirebaseAuthUserCollisionException -> R.string.error_email_already_used
-            is FirebaseAuthInvalidCredentialsException,
-            is FirebaseAuthInvalidUserException -> R.string.error_wrong_credentials
-            is FirebaseNetworkException -> R.string.error_no_network
-            is FirebaseTooManyRequestsException -> R.string.error_too_many_requests
+            is FirebaseAuthInvalidCredentialsException -> R.string.error_wrong_credentials
             else -> R.string.error_unknown
         }
     }
