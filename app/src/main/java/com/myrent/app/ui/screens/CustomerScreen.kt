@@ -1,5 +1,6 @@
 package com.myrent.app.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -61,6 +62,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.myrent.app.R
+import com.myrent.app.ui.components.AppBackground
 import com.myrent.app.ui.customer.CustomerItemUi
 import com.myrent.app.ui.customer.CustomerUiState
 import com.myrent.app.ui.customer.CustomerViewModel
@@ -68,6 +70,8 @@ import com.myrent.app.ui.theme.AccentGold
 import com.myrent.app.ui.theme.DarkBackground
 import com.myrent.app.ui.theme.DarkSurface
 import com.myrent.app.ui.theme.DarkSurfaceVariant
+import com.myrent.app.ui.theme.GoldBorderColor
+import com.myrent.app.ui.theme.OnAccentGold
 import com.myrent.app.ui.theme.TextPrimary
 import com.myrent.app.ui.theme.TextSecondary
 
@@ -85,95 +89,93 @@ fun CustomerScreen(
     var selectedCustomerForDetail by remember { mutableStateOf<CustomerItemUi?>(null) }
     val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
 
-    Scaffold(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(DarkBackground),
-        containerColor = DarkBackground
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-            // Header Judul
-            Text(
-                text = stringResource(R.string.nav_customer),
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextPrimary,
-                modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp)
-            )
-
-            // Input Pencarian
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { customerViewModel.onSearchQueryChanged(it) },
-                placeholder = { Text("Cari nama penyewa atau No WA...") },
-                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Cari", tint = TextSecondary) },
-                singleLine = true,
+    AppBackground {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            containerColor = Color.Transparent
+        ) { innerPadding ->
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = AccentGold,
-                    unfocusedBorderColor = DarkSurfaceVariant,
-                    focusedTextColor = TextPrimary,
-                    unfocusedTextColor = TextPrimary
+                    .fillMaxSize()
+                    .padding(innerPadding)
+            ) {
+                Text(
+                    text = stringResource(R.string.nav_customer),
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary,
+                    modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp)
                 )
-            )
 
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // Tampilan Kosong atau Daftar Kartu Penyewa
-            if (customerList.isEmpty()) {
-                Box(
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { customerViewModel.onSearchQueryChanged(it) },
+                    placeholder = { Text("Cari nama penyewa atau No WA...", color = TextSecondary) },
+                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Cari", tint = TextSecondary) },
+                    singleLine = true,
                     modifier = Modifier
-                        .fillMaxSize()
-                        .padding(32.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Icon(
-                            imageVector = Icons.Filled.Person,
-                            contentDescription = "Penyewa Kosong",
-                            tint = TextSecondary,
-                            modifier = Modifier.size(64.dp)
-                        )
-                        Spacer(modifier = Modifier.height(16.dp))
-                        Text(
-                            text = "Belum Ada Data Penyewa",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = "Belum ada data penyewa. Data akan muncul otomatis setelah ada sewa.",
-                            fontSize = 14.sp,
-                            color = TextSecondary,
-                            textAlign = TextAlign.Center
-                        )
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = AccentGold,
+                        unfocusedBorderColor = DarkSurfaceVariant,
+                        focusedContainerColor = DarkSurfaceVariant,
+                        unfocusedContainerColor = DarkSurfaceVariant,
+                        focusedTextColor = TextPrimary,
+                        unfocusedTextColor = TextPrimary
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(16.dp))
+
+                if (customerList.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                imageVector = Icons.Filled.Person,
+                                contentDescription = "Penyewa Kosong",
+                                tint = TextSecondary,
+                                modifier = Modifier.size(64.dp)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = "Belum Ada Data Penyewa",
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = "Belum ada data penyewa. Data akan muncul otomatis setelah ada sewa.",
+                                fontSize = 14.sp,
+                                color = TextSecondary,
+                                textAlign = TextAlign.Center
+                            )
+                        }
                     }
-                }
-            } else {
-                LazyColumn(
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 80.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.fillMaxSize()
-                ) {
-                    items(customerList, key = { it.customer.id }) { itemUi ->
-                        CustomerCard(
-                            itemUi = itemUi,
-                            onClick = { selectedCustomerForDetail = itemUi }
-                        )
+                } else {
+                    LazyColumn(
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 80.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        items(customerList, key = { it.customer.id }) { itemUi ->
+                            CustomerCard(
+                                itemUi = itemUi,
+                                onClick = { selectedCustomerForDetail = itemUi }
+                            )
+                        }
                     }
                 }
             }
         }
     }
 
-    // Detail Penyewa Bottom Sheet
     if (selectedCustomerForDetail != null) {
         DetailCustomerBottomSheet(
             sheetState = sheetState,
@@ -185,7 +187,7 @@ fun CustomerScreen(
 }
 
 /**
- * Kartu Penyewa di Daftar
+ * Kartu Penyewa di Daftar (Sudut 20dp, Surface #35302B, Garis Emas 12% Alpha)
  */
 @Composable
 fun CustomerCard(
@@ -196,7 +198,8 @@ fun CustomerCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() },
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(1.dp, GoldBorderColor),
         colors = CardDefaults.cardColors(containerColor = DarkSurface)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -231,7 +234,6 @@ fun CustomerCard(
                     }
                 }
 
-                // Badge Total Sewa
                 Box(
                     modifier = Modifier
                         .clip(RoundedCornerShape(6.dp))
@@ -258,9 +260,6 @@ fun CustomerCard(
     }
 }
 
-/**
- * Bottom Sheet Detail & Riwayat Sewa Penyewa
- */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun DetailCustomerBottomSheet(
@@ -286,7 +285,6 @@ fun DetailCustomerBottomSheet(
                 .verticalScroll(scrollState)
                 .padding(horizontal = 24.dp, vertical = 12.dp)
         ) {
-            // Header Detail Penyewa
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -323,14 +321,13 @@ fun DetailCustomerBottomSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Baris Tombol Chat WA & Edit
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 Button(
                     onClick = { viewModel.chatWhatsApp(context, cust.noWa) },
                     modifier = Modifier
                         .weight(1f)
                         .height(48.dp),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366), contentColor = Color.White)
                 ) {
                     Icon(imageVector = Icons.AutoMirrored.Filled.Send, contentDescription = "Chat WA", modifier = Modifier.size(18.dp))
@@ -343,7 +340,7 @@ fun DetailCustomerBottomSheet(
                     modifier = Modifier
                         .weight(1f)
                         .height(48.dp),
-                    shape = RoundedCornerShape(8.dp),
+                    shape = RoundedCornerShape(10.dp),
                     colors = ButtonDefaults.outlinedButtonColors(contentColor = AccentGold)
                 ) {
                     Icon(imageVector = Icons.Filled.Edit, contentDescription = "Edit", modifier = Modifier.size(18.dp))
@@ -354,7 +351,6 @@ fun DetailCustomerBottomSheet(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Riwayat Sewa
             Text(
                 text = "Riwayat Sewa (${itemUi.riwayatSewa.size})",
                 fontSize = 16.sp,
@@ -377,7 +373,8 @@ fun DetailCustomerBottomSheet(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 4.dp),
-                        shape = RoundedCornerShape(10.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, GoldBorderColor),
                         colors = CardDefaults.cardColors(containerColor = DarkSurfaceVariant)
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {
@@ -405,7 +402,6 @@ fun DetailCustomerBottomSheet(
         }
     }
 
-    // Dialog Edit Data Penyewa
     if (showEditDialog) {
         var namaInput by remember { mutableStateOf(cust.nama) }
         var noWaInput by remember { mutableStateOf(cust.noWa) }
@@ -474,10 +470,10 @@ fun DetailCustomerBottomSheet(
                         )
                     },
                     enabled = !isLoading,
-                    colors = ButtonDefaults.buttonColors(containerColor = AccentGold, contentColor = DarkBackground)
+                    colors = ButtonDefaults.buttonColors(containerColor = AccentGold, contentColor = OnAccentGold)
                 ) {
                     if (isLoading) {
-                        CircularProgressIndicator(modifier = Modifier.size(18.dp), color = DarkBackground, strokeWidth = 2.dp)
+                        CircularProgressIndicator(modifier = Modifier.size(18.dp), color = OnAccentGold, strokeWidth = 2.dp)
                     } else {
                         Text("Simpan", fontWeight = FontWeight.Bold)
                     }

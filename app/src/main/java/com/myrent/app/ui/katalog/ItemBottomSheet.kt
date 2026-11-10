@@ -1,5 +1,6 @@
 package com.myrent.app.ui.katalog
 
+import android.graphics.BitmapFactory
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
@@ -21,6 +22,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.ArrowDropDown
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.PhotoCamera
@@ -40,6 +42,7 @@ import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -67,7 +70,7 @@ import com.myrent.app.ui.theme.TextPrimary
 import com.myrent.app.ui.theme.TextSecondary
 
 /**
- * Bottom Sheet Formulir Tambah dan Edit Barang dengan Input Stok
+ * Bottom Sheet Formulir Tambah dan Edit Barang dengan Input Stok & Tambah Kategori Inline
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -92,10 +95,19 @@ fun ItemBottomSheet(
     var isKategoriDropdownExpanded by remember { mutableStateOf(false) }
     var isStatusDropdownExpanded by remember { mutableStateOf(false) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
+    var showAddCategoryInlineDialog by remember { mutableStateOf(false) }
+    var newCategoryInlineInput by remember { mutableStateOf("") }
 
     val kategoriList by viewModel.kategoriList.collectAsState()
     val uiState by viewModel.uiState.collectAsState()
     val isLoading = uiState is CatalogUiState.Loading
+
+    // Auto-select kategori pertama jika belum ada kategori terpilih
+    LaunchedEffect(kategoriList) {
+        if (selectedKategoriNama.isEmpty() && kategoriList.isNotEmpty()) {
+            selectedKategoriNama = kategoriList.first().nama
+        }
+    }
 
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickVisualMedia()
@@ -206,10 +218,14 @@ fun ItemBottomSheet(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Kategori (Dropdown)
+            // Kategori (Dropdown + Fitur Tambah Kategori Langsung)
             Box(modifier = Modifier.fillMaxWidth()) {
+                val displayKategoriText = selectedKategoriNama.ifEmpty {
+                    if (kategoriList.isEmpty()) "Belum ada kategori (Ketuk untuk tambah)" else "Pilih Kategori"
+                }
+
                 OutlinedTextField(
-                    value = selectedKategoriNama,
+                    value = displayKategoriText,
                     onValueChange = {},
                     readOnly = true,
                     label = { Text(stringResource(R.string.label_item_category)) },
@@ -225,13 +241,21 @@ fun ItemBottomSheet(
                 Box(
                     modifier = Modifier
                         .matchParentSize()
-                        .clickable { isKategoriDropdownExpanded = true }
+                        .clickable {
+                            if (kategoriList.isEmpty()) {
+                                showAddCategoryInlineDialog = true
+                            } else {
+                                isKategoriDropdownExpanded = true
+                            }
+                        }
                 )
 
                 DropdownMenu(
                     expanded = isKategoriDropdownExpanded,
                     onDismissRequest = { isKategoriDropdownExpanded = false },
-                    modifier = Modifier.fillMaxWidth(0.85f).background(DarkSurface)
+                    modifier = Modifier
+                        .fillMaxWidth(0.85f)
+                        .background(DarkSurface)
                 ) {
                     kategoriList.forEach { kat ->
                         DropdownMenuItem(
@@ -243,6 +267,21 @@ fun ItemBottomSheet(
                             }
                         )
                     }
+
+                    // Opsi Tambah Kategori Baru di dalam Dropdown
+                    DropdownMenuItem(
+                        text = {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(imageVector = Icons.Filled.Add, contentDescription = "Tambah", tint = AccentGold, modifier = Modifier.size(18.dp))
+                                Spacer(modifier = Modifier.width(8.dp))
+                                Text(text = "+ Tambah Kategori Baru", color = AccentGold, fontWeight = FontWeight.Bold)
+                            }
+                        },
+                        onClick = {
+                            isKategoriDropdownExpanded = false
+                            showAddCategoryInlineDialog = true
+                        }
+                    )
                 }
             }
 
@@ -368,11 +407,12 @@ fun ItemBottomSheet(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Catatan (Opsional)
+            // Jaminan / Syarat Sewa
             OutlinedTextField(
                 value = catatan,
                 onValueChange = { catatan = it },
-                label = { Text(stringResource(R.string.label_item_notes)) },
+                label = { Text("Jaminan / Syarat Sewa (opsional)") },
+                placeholder = { Text("misal: KTP / SIM / Kartu Pelajar") },
                 modifier = Modifier.fillMaxWidth(),
                 colors = OutlinedTextFieldDefaults.colors(
                     focusedBorderColor = AccentGold, unfocusedBorderColor = DarkSurfaceVariant,
@@ -462,6 +502,56 @@ fun ItemBottomSheet(
         }
     }
 
+    // Dialog Tambah Kategori Langsung (Inline)
+    if (showAddCategoryInlineDialog) {
+        AlertDialog(
+            onDismissRequest = { showAddCategoryInlineDialog = false },
+            title = { Text("Tambah Kategori Baru", color = TextPrimary, fontWeight = FontWeight.Bold) },
+            text = {
+                Column {
+                    Text("Masukkan nama kategori barang baru yang ingin ditambahkan:", color = TextSecondary, fontSize = 13.sp)
+                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(
+                        value = newCategoryInlineInput,
+                        onValueChange = { newCategoryInlineInput = it },
+                        label = { Text("Nama Kategori Baru") },
+                        placeholder = { Text("misal: Kamera, Gaun, Camp") },
+                        singleLine = true,
+                        modifier = Modifier.fillMaxWidth(),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = AccentGold, unfocusedBorderColor = DarkSurfaceVariant,
+                            focusedLabelColor = AccentGold, unfocusedLabelColor = TextSecondary,
+                            focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary
+                        )
+                    )
+                }
+            },
+            confirmButton = {
+                Button(
+                    onClick = {
+                        val input = newCategoryInlineInput.trim()
+                        if (input.isNotEmpty()) {
+                            viewModel.tambahKategoriInline(input) { addedCat ->
+                                selectedKategoriNama = addedCat
+                                newCategoryInlineInput = ""
+                                showAddCategoryInlineDialog = false
+                            }
+                        }
+                    },
+                    colors = ButtonDefaults.buttonColors(containerColor = AccentGold, contentColor = DarkBackground)
+                ) {
+                    Text("Tambah", fontWeight = FontWeight.Bold)
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { showAddCategoryInlineDialog = false }) {
+                    Text("Batal", color = TextSecondary)
+                }
+            },
+            containerColor = DarkSurface
+        )
+    }
+
     // Dialog Konfirmasi Hapus Barang
     if (showDeleteConfirmDialog && itemToEdit != null) {
         AlertDialog(
@@ -495,7 +585,7 @@ fun AsyncImageUriPreview(uri: Uri) {
     val bitmap = remember(uri) {
         try {
             val inputStream = context.contentResolver.openInputStream(uri)
-            val b = android.graphics.BitmapFactory.decodeStream(inputStream)
+            val b = BitmapFactory.decodeStream(inputStream)
             inputStream?.close()
             b
         } catch (e: Exception) {

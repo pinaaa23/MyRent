@@ -43,13 +43,13 @@ class NotaConfigRepository(
 
             val doc = NotaConfigDoc(
                 judulNota = snapshot.getString("judulNota") ?: "NOTA",
-                kalimatPembuka = snapshot.getString("kalimatPembuka") ?: "",
-                catatanBawah = snapshot.getString("catatanBawah") ?: "",
+                kalimatPembuka = snapshot.getString("kalimatPembuka") ?: snapshot.getString("notaHeader") ?: "",
+                catatanBawah = snapshot.getString("catatanBawah") ?: snapshot.getString("notaFooter") ?: "",
                 flagTampilAlamat = snapshot.getBoolean("flagTampilAlamat") ?: true,
                 flagTampilTelp = snapshot.getBoolean("flagTampilTelp") ?: true,
-                templateFollowUpH1 = snapshot.getString("templateFollowUpH1") ?: "",
-                templateFollowUpHariH = snapshot.getString("templateFollowUpHariH") ?: "",
-                templateFollowUpTelat = snapshot.getString("templateFollowUpTelat") ?: "",
+                templateFollowUpH1 = snapshot.getString("templateFollowUpH1") ?: snapshot.getString("templatePesanH1") ?: "",
+                templateFollowUpHariH = snapshot.getString("templateFollowUpHariH") ?: snapshot.getString("templatePesanH") ?: "",
+                templateFollowUpTelat = snapshot.getString("templateFollowUpTelat") ?: snapshot.getString("templatePesanTelat") ?: "",
                 updatedAt = snapshot.getLong("updatedAt") ?: System.currentTimeMillis()
             )
 
@@ -71,13 +71,13 @@ class NotaConfigRepository(
 
         NotaConfigDoc(
             judulNota = snapshot.getString("judulNota") ?: "NOTA",
-            kalimatPembuka = snapshot.getString("kalimatPembuka") ?: "",
-            catatanBawah = snapshot.getString("catatanBawah") ?: "",
+            kalimatPembuka = snapshot.getString("kalimatPembuka") ?: snapshot.getString("notaHeader") ?: "",
+            catatanBawah = snapshot.getString("catatanBawah") ?: snapshot.getString("notaFooter") ?: "",
             flagTampilAlamat = snapshot.getBoolean("flagTampilAlamat") ?: true,
             flagTampilTelp = snapshot.getBoolean("flagTampilTelp") ?: true,
-            templateFollowUpH1 = snapshot.getString("templateFollowUpH1") ?: "",
-            templateFollowUpHariH = snapshot.getString("templateFollowUpHariH") ?: "",
-            templateFollowUpTelat = snapshot.getString("templateFollowUpTelat") ?: "",
+            templateFollowUpH1 = snapshot.getString("templateFollowUpH1") ?: snapshot.getString("templatePesanH1") ?: "",
+            templateFollowUpHariH = snapshot.getString("templateFollowUpHariH") ?: snapshot.getString("templatePesanH") ?: "",
+            templateFollowUpTelat = snapshot.getString("templateFollowUpTelat") ?: snapshot.getString("templatePesanTelat") ?: "",
             updatedAt = snapshot.getLong("updatedAt") ?: System.currentTimeMillis()
         )
     }
@@ -98,7 +98,9 @@ class NotaConfigRepository(
         val map = mapOf(
             "judulNota" to judulNota.trim().ifEmpty { "NOTA" },
             "kalimatPembuka" to kalimatPembuka.trim(),
+            "notaHeader" to kalimatPembuka.trim(),
             "catatanBawah" to catatanBawah.trim(),
+            "notaFooter" to catatanBawah.trim(),
             "flagTampilAlamat" to flagTampilAlamat,
             "flagTampilTelp" to flagTampilTelp,
             "updatedAt" to System.currentTimeMillis()
@@ -119,8 +121,11 @@ class NotaConfigRepository(
 
         val map = mapOf(
             "templateFollowUpH1" to templateH1.trim(),
+            "templatePesanH1" to templateH1.trim(),
             "templateFollowUpHariH" to templateHariH.trim(),
+            "templatePesanH" to templateHariH.trim(),
             "templateFollowUpTelat" to templateTelat.trim(),
+            "templatePesanTelat" to templateTelat.trim(),
             "updatedAt" to System.currentTimeMillis()
         )
         getNotaDocRef(uid).set(map, SetOptions.merge()).await()

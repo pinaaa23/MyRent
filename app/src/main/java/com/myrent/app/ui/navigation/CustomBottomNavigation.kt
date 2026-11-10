@@ -1,21 +1,31 @@
 package com.myrent.app.ui.navigation
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
+import androidx.compose.animation.core.FastOutSlowInEasing
+import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.tween
+import androidx.compose.animation.expandHorizontally
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkHorizontally
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,14 +40,14 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.myrent.app.ui.theme.AccentGold
 import com.myrent.app.ui.theme.DarkSurface
-import com.myrent.app.ui.theme.NavActiveCircle
-import com.myrent.app.ui.theme.TextPrimary
+import com.myrent.app.ui.theme.GoldBorderColor
+import com.myrent.app.ui.theme.OnAccentGold
 import com.myrent.app.ui.theme.TextSecondary
 
 /**
- * Navigation Bar Custom (bukan NavigationBar bawaan)
- * 5 Menu Utama: Beranda, Sewa, Katalog, Penyewa, Laporan
+ * Bottom Navigation Bar Mewah dengan Animasi Kapsul Emas Halus & Mulus
  */
 @Composable
 fun CustomBottomNavigation(
@@ -53,80 +63,94 @@ fun CustomBottomNavigation(
         Screen.Report
     )
 
-    Box(
+    Card(
         modifier = modifier
             .fillMaxWidth()
-            .clip(RoundedCornerShape(topStart = 16.dp, topEnd = 16.dp))
-            .background(DarkSurface)
-            .height(72.dp)
+            .height(72.dp),
+        shape = RoundedCornerShape(topStart = 20.dp, topEnd = 20.dp),
+        border = BorderStroke(1.dp, GoldBorderColor),
+        colors = CardDefaults.cardColors(containerColor = DarkSurface)
     ) {
         Row(
             modifier = Modifier
                 .fillMaxWidth()
-                .fillMaxHeight(),
-            horizontalArrangement = Arrangement.SpaceEvenly,
+                .fillMaxHeight()
+                .padding(horizontal = 8.dp),
+            horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically
         ) {
             items.forEach { screen ->
                 val isSelected = currentRoute == screen.route
 
-                val circleBgColor by animateColorAsState(
-                    targetValue = if (isSelected) NavActiveCircle else Color.Transparent,
-                    animationSpec = tween(durationMillis = 200),
-                    label = "circleBgColor"
+                // Animasi pembesaran lebar kapsul yang halus (1.0f -> 1.4f)
+                val itemWeight by animateFloatAsState(
+                    targetValue = if (isSelected) 1.4f else 1.0f,
+                    animationSpec = tween(durationMillis = 300, easing = FastOutSlowInEasing),
+                    label = "itemWeight"
                 )
 
-                val iconColor by animateColorAsState(
-                    targetValue = if (isSelected) TextPrimary else TextSecondary,
-                    animationSpec = tween(durationMillis = 200),
-                    label = "iconColor"
+                // Animasi warna latar & ikon yang mulus
+                val capsuleBgColor by animateColorAsState(
+                    targetValue = if (isSelected) AccentGold else Color.Transparent,
+                    animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing),
+                    label = "capsuleBgColor"
                 )
 
-                val textColor by animateColorAsState(
-                    targetValue = if (isSelected) TextPrimary else TextSecondary,
-                    animationSpec = tween(durationMillis = 200),
-                    label = "textColor"
+                val contentColor by animateColorAsState(
+                    targetValue = if (isSelected) OnAccentGold else TextSecondary,
+                    animationSpec = tween(durationMillis = 280, easing = FastOutSlowInEasing),
+                    label = "contentColor"
                 )
 
-                Column(
+                Box(
                     modifier = Modifier
-                        .weight(1f)
+                        .weight(itemWeight)
                         .fillMaxHeight()
+                        .padding(vertical = 12.dp)
+                        .clip(RoundedCornerShape(24.dp))
+                        .background(capsuleBgColor)
                         .clickable(
                             interactionSource = remember { MutableInteractionSource() },
                             indication = null,
                             onClick = { onItemSelected(screen) }
                         ),
-                    horizontalAlignment = Alignment.CenterHorizontally,
-                    verticalArrangement = Arrangement.Center
+                    contentAlignment = Alignment.Center
                 ) {
-                    Box(
-                        modifier = Modifier
-                            .size(36.dp)
-                            .clip(CircleShape)
-                            .background(circleBgColor),
-                        contentAlignment = Alignment.Center
+                    Row(
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.Center,
+                        modifier = Modifier.padding(horizontal = 8.dp)
                     ) {
                         screen.icon?.let { iconVector ->
                             Icon(
                                 imageVector = iconVector,
                                 contentDescription = stringResource(id = screen.titleResId),
-                                tint = iconColor,
+                                tint = contentColor,
                                 modifier = Modifier.size(20.dp)
                             )
                         }
+
+                        // Animasi pelebaran & kemunculan teks nama menu yang halus
+                        AnimatedVisibility(
+                            visible = isSelected,
+                            enter = fadeIn(animationSpec = tween(250, easing = FastOutSlowInEasing)) +
+                                    expandHorizontally(animationSpec = tween(280, easing = FastOutSlowInEasing)),
+                            exit = fadeOut(animationSpec = tween(200, easing = FastOutSlowInEasing)) +
+                                   shrinkHorizontally(animationSpec = tween(240, easing = FastOutSlowInEasing))
+                        ) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Spacer(modifier = Modifier.width(6.dp))
+                                Text(
+                                    text = stringResource(id = screen.titleResId),
+                                    fontSize = 12.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = contentColor,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis
+                                )
+                            }
+                        }
                     }
-
-                    Spacer(modifier = Modifier.height(2.dp))
-
-                    Text(
-                        text = stringResource(id = screen.titleResId),
-                        fontSize = 11.sp,
-                        fontWeight = if (isSelected) FontWeight.Bold else FontWeight.Normal,
-                        color = textColor,
-                        maxLines = 1,
-                        overflow = TextOverflow.Ellipsis
-                    )
                 }
             }
         }

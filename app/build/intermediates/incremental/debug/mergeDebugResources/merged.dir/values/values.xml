@@ -140,7 +140,7 @@
     <string name="androidx_startup" translatable="false">androidx.startup</string>
     <string name="app_name">MyRent</string>
     <string name="btn_add_category">Tambah Kategori</string>
-    <string name="btn_add_item">+ Tambah Barang</string>
+    <string name="btn_add_item">Tambah Barang</string>
     <string name="btn_back_to_dashboard">Kembali ke Dashboard</string>
     <string name="btn_back_to_login">Kembali ke Login</string>
     <string name="btn_cancel">Batal</string>

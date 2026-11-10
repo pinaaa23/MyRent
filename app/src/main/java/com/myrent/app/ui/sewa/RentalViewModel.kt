@@ -17,6 +17,8 @@ import com.myrent.app.data.rentals.RentalRepository
 import com.myrent.app.data.settings.DefaultStoreConfig
 import com.myrent.app.data.settings.StoreConfigDoc
 import com.myrent.app.data.settings.StoreConfigRepository
+import com.myrent.app.data.settings.StoreProfileDoc
+import com.myrent.app.data.settings.StoreProfileRepository
 import com.myrent.app.data.settings.TemplateReplacer
 import com.myrent.app.ui.screens.formatDate
 import com.myrent.app.ui.screens.formatRupiah
@@ -331,11 +333,18 @@ class RentalViewModel(
             }
 
             val userDoc = authRepository.getUserProfile().getOrDefault(UserDoc())
+            val storeProfileDoc = StoreProfileRepository().getStoreProfile().getOrDefault(
+                StoreProfileDoc()
+            )
             val storeConfigDoc = storeConfigRepository.getStoreConfig().getOrDefault(StoreConfigDoc())
 
             val template = storeConfigDoc.templatePesanNota.ifEmpty { DefaultStoreConfig.TEMPLATE_NOTA_DEFAULT }
             val tglMulai = formatDate(rental.tanggalMulai)
             val tglKembali = formatDate(rental.tanggalKembali)
+
+            val tokoNama = storeProfileDoc.nama.ifEmpty { userDoc.namaToko.ifEmpty { "MYRENT STORE" } }
+            val alamatStr = storeProfileDoc.alamat.ifEmpty { userDoc.alamatToko }
+            val telpStr = storeProfileDoc.noTelp.ifEmpty { userDoc.noWaToko }
 
             val pesan = TemplateReplacer.replaceVariables(
                 template = template,
@@ -345,9 +354,11 @@ class RentalViewModel(
                 total = formatRupiah(rental.hargaTotal),
                 dp = formatRupiah(rental.dp),
                 sisa = formatRupiah(rental.sisaBayar),
-                invoice = rental.invoiceId.ifEmpty { "INV-${rental.dibuatPada}" },
-                toko = userDoc.namaToko.ifEmpty { "MYRENT STORE" },
-                catatan = rental.catatan
+                invoice = rental.invoiceId.ifEmpty { "NOTA-${rental.dibuatPada}" },
+                toko = tokoNama,
+                catatan = rental.catatan,
+                telpToko = telpStr,
+                alamatToko = alamatStr
             )
 
             try {

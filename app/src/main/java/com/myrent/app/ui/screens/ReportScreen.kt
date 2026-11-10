@@ -1,5 +1,6 @@
 package com.myrent.app.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -51,13 +52,17 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.myrent.app.R
 import com.myrent.app.data.rentals.Rental
+import com.myrent.app.ui.components.AppBackground
 import com.myrent.app.ui.report.PeriodType
 import com.myrent.app.ui.report.ReportBarChart
 import com.myrent.app.ui.report.ReportViewModel
 import com.myrent.app.ui.theme.AccentGold
-import com.myrent.app.ui.theme.DarkBackground
 import com.myrent.app.ui.theme.DarkSurface
 import com.myrent.app.ui.theme.DarkSurfaceVariant
+import com.myrent.app.ui.theme.GoldBorderColor
+import com.myrent.app.ui.theme.OnAccentGold
+import com.myrent.app.ui.theme.StatusGreen
+import com.myrent.app.ui.theme.StatusRed
 import com.myrent.app.ui.theme.TextPrimary
 import com.myrent.app.ui.theme.TextSecondary
 
@@ -72,364 +77,360 @@ fun ReportScreen(
     val uiState by reportViewModel.uiState.collectAsState()
     val scrollState = rememberScrollState()
 
-    Scaffold(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(DarkBackground),
-        containerColor = DarkBackground
-    ) { innerPadding ->
-        if (uiState.isLoading) {
-            Box(
-                modifier = Modifier
-                    .fillMaxSize()
-                    .padding(innerPadding),
-                contentAlignment = Alignment.Center
-            ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    CircularProgressIndicator(color = AccentGold)
-                    Spacer(modifier = Modifier.height(12.dp))
-                    Text("Memuat data laporan...", color = TextSecondary, fontSize = 14.sp)
+    AppBackground {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            containerColor = Color.Transparent
+        ) { innerPadding ->
+            if (uiState.isLoading) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        CircularProgressIndicator(color = AccentGold)
+                        Spacer(modifier = Modifier.height(12.dp))
+                        Text("Memuat data laporan...", color = TextSecondary, fontSize = 14.sp)
+                    }
                 }
+                return@Scaffold
             }
-            return@Scaffold
-        }
 
-        if (uiState.errorMessage != null) {
-            Box(
+            if (uiState.errorMessage != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                        .padding(24.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text(
+                            text = uiState.errorMessage!!,
+                            color = StatusRed,
+                            fontSize = 15.sp,
+                            textAlign = TextAlign.Center
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Button(
+                            onClick = { reportViewModel.loadReportData() },
+                            colors = ButtonDefaults.buttonColors(containerColor = AccentGold, contentColor = OnAccentGold)
+                        ) {
+                            Icon(imageVector = Icons.Filled.Refresh, contentDescription = "Coba lagi")
+                            Spacer(modifier = Modifier.width(8.dp))
+                            Text("Coba lagi", fontWeight = FontWeight.Bold)
+                        }
+                    }
+                }
+                return@Scaffold
+            }
+
+            Column(
                 modifier = Modifier
                     .fillMaxSize()
                     .padding(innerPadding)
-                    .padding(24.dp),
-                contentAlignment = Alignment.Center
+                    .verticalScroll(scrollState)
+                    .padding(bottom = 80.dp)
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Text(
-                        text = uiState.errorMessage!!,
-                        color = Color(0xFFFF6B6B),
-                        fontSize = 15.sp,
-                        textAlign = TextAlign.Center
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Button(
-                        onClick = { reportViewModel.loadReportData() },
-                        colors = ButtonDefaults.buttonColors(containerColor = AccentGold, contentColor = DarkBackground)
-                    ) {
-                        Icon(imageVector = Icons.Filled.Refresh, contentDescription = "Coba lagi")
-                        Spacer(modifier = Modifier.width(8.dp))
-                        Text("Coba lagi", fontWeight = FontWeight.Bold)
-                    }
-                }
-            }
-            return@Scaffold
-        }
-
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .verticalScroll(scrollState)
-                .padding(bottom = 80.dp)
-        ) {
-            // 1. Header Judul Laporan
-            Text(
-                text = stringResource(id = R.string.nav_report),
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextPrimary,
-                modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp)
-            )
-
-            // 2. Chip Pilihan Periode (Hari, Minggu, Bulan, Tahun)
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                val periodOptions = listOf(
-                    PeriodType.HARI to "Hari",
-                    PeriodType.MINGGU to "Minggu",
-                    PeriodType.BULAN to "Bulan",
-                    PeriodType.TAHUN to "Tahun"
+                Text(
+                    text = stringResource(id = R.string.nav_report),
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary,
+                    modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp)
                 )
 
-                items(periodOptions) { (pType, pLabel) ->
-                    val isSelected = uiState.selectedPeriodType == pType
-                    FilterChip(
-                        selected = isSelected,
-                        onClick = { reportViewModel.selectPeriodType(pType) },
-                        label = { Text(pLabel) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = AccentGold,
-                            selectedLabelColor = DarkBackground,
-                            containerColor = DarkSurfaceVariant,
-                            labelColor = TextSecondary
-                        )
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    val periodOptions = listOf(
+                        PeriodType.HARI to "Hari",
+                        PeriodType.MINGGU to "Minggu",
+                        PeriodType.BULAN to "Bulan",
+                        PeriodType.TAHUN to "Tahun"
                     )
+
+                    items(periodOptions) { (pType, pLabel) ->
+                        val isSelected = uiState.selectedPeriodType == pType
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = { reportViewModel.selectPeriodType(pType) },
+                            label = { Text(pLabel) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = AccentGold,
+                                selectedLabelColor = OnAccentGold,
+                                containerColor = DarkSurfaceVariant,
+                                labelColor = TextSecondary
+                            )
+                        )
+                    }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-            // 3. Baris Navigasi Periode (Panah Kiri / Kanan & Teks Periode)
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = DarkSurface)
-            ) {
-                Row(
+                Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .padding(horizontal = 8.dp, vertical = 6.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                    verticalAlignment = Alignment.CenterVertically
+                        .padding(horizontal = 16.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(1.dp, GoldBorderColor),
+                    colors = CardDefaults.cardColors(containerColor = DarkSurface)
                 ) {
-                    IconButton(onClick = { reportViewModel.navigatePeriodOffset(-1) }) {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Sebelumnya", tint = TextPrimary)
-                    }
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 8.dp, vertical = 6.dp),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        IconButton(onClick = { reportViewModel.navigatePeriodOffset(-1) }) {
+                            Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Sebelumnya", tint = TextPrimary)
+                        }
 
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text(
-                            text = uiState.periodRange?.displayText ?: "",
-                            fontSize = 15.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary
-                        )
-
-                        if (uiState.periodRange != null && !uiState.periodRange!!.isCurrentPeriod) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
                             Text(
-                                text = uiState.periodRange!!.currentButtonText,
-                                fontSize = 11.sp,
+                                text = uiState.periodRange?.displayText ?: "",
+                                fontSize = 15.sp,
                                 fontWeight = FontWeight.Bold,
-                                color = AccentGold,
-                                modifier = Modifier
-                                    .clickable { reportViewModel.resetToCurrentPeriod() }
-                                    .padding(top = 2.dp)
+                                color = TextPrimary
+                            )
+
+                            if (uiState.periodRange != null && !uiState.periodRange!!.isCurrentPeriod) {
+                                Text(
+                                    text = uiState.periodRange!!.currentButtonText,
+                                    fontSize = 11.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = AccentGold,
+                                    modifier = Modifier
+                                        .clickable { reportViewModel.resetToCurrentPeriod() }
+                                        .padding(top = 2.dp)
+                                )
+                            }
+                        }
+
+                        IconButton(
+                            onClick = { reportViewModel.navigatePeriodOffset(1) },
+                            enabled = uiState.periodRange != null && !uiState.periodRange!!.isCurrentPeriod
+                        ) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ArrowForward,
+                                contentDescription = "Berikutnya",
+                                tint = if (uiState.periodRange != null && !uiState.periodRange!!.isCurrentPeriod) TextPrimary else TextSecondary
                             )
                         }
                     }
-
-                    IconButton(
-                        onClick = { reportViewModel.navigatePeriodOffset(1) },
-                        enabled = uiState.periodRange != null && !uiState.periodRange!!.isCurrentPeriod
-                    ) {
-                        Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ArrowForward,
-                            contentDescription = "Berikutnya",
-                            tint = if (uiState.periodRange != null && !uiState.periodRange!!.isCurrentPeriod) TextPrimary else TextSecondary
-                        )
-                    }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(16.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-            // 4. Kartu Utama: Omzet Kotor & 3 Kartu Ringkasan
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                shape = RoundedCornerShape(16.dp),
-                colors = CardDefaults.cardColors(containerColor = DarkSurface)
-            ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text("Omzet Kotor", fontSize = 14.sp, color = TextSecondary)
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = formatRupiah(uiState.omzetKotor),
-                        fontSize = 32.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = AccentGold
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = "Total biaya sewa pada periode ini",
-                        fontSize = 12.sp,
-                        color = TextSecondary
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    // 3 Kartu Ringkasan
-                    Row(
-                        modifier = Modifier.fillMaxWidth(),
-                        horizontalArrangement = Arrangement.spacedBy(8.dp)
-                    ) {
-                        StatSubCard(
-                            label = "Transaksi",
-                            value = "${uiState.totalTransaksi}",
-                            valueColor = TextPrimary,
-                            modifier = Modifier.weight(1f)
-                        )
-
-                        StatSubCard(
-                            label = "Sudah Diterima",
-                            value = formatRupiah(uiState.sudahDiterima),
-                            valueColor = Color(0xFF6BCB77),
-                            modifier = Modifier.weight(1.2f)
-                        )
-
-                        StatSubCard(
-                            label = "Belum Dibayar",
-                            value = formatRupiah(uiState.belumDibayar),
-                            valueColor = Color(0xFFFF6B6B),
-                            modifier = Modifier.weight(1.2f)
-                        )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(16.dp))
-
-            // 5. Grafik Batang Canvas
-            Box(modifier = Modifier.padding(horizontal = 16.dp)) {
-                ReportBarChart(
-                    bars = uiState.chartBars,
-                    selectedIndex = uiState.selectedBarIndex,
-                    onBarSelected = { reportViewModel.selectBar(it) }
-                )
-            }
-
-            Spacer(modifier = Modifier.height(20.dp))
-
-            // 6. Section "Barang Paling Sering Disewa"
-            SectionTitle("Barang Paling Sering Disewa (Top 5)")
-
-            if (uiState.topItems.isEmpty()) {
-                EmptySectionMessage("Belum ada transaksi pada periode ini.")
-            } else {
                 Card(
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(horizontal = 16.dp),
-                    shape = RoundedCornerShape(12.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(1.dp, GoldBorderColor),
                     colors = CardDefaults.cardColors(containerColor = DarkSurface)
                 ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        uiState.topItems.forEachIndexed { index, item ->
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(vertical = 6.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
-                            ) {
-                                Text(
-                                    text = "${index + 1}. ${item.namaBarang}",
-                                    fontSize = 14.sp,
-                                    fontWeight = FontWeight.SemiBold,
-                                    color = TextPrimary
-                                )
-                                Text(
-                                    text = "${item.jumlahSewaCount}x disewa",
-                                    fontSize = 13.sp,
-                                    fontWeight = FontWeight.Bold,
-                                    color = AccentGold
-                                )
-                            }
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text("Omzet Kotor", fontSize = 14.sp, color = TextSecondary)
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = formatRupiah(uiState.omzetKotor),
+                            fontSize = 32.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = AccentGold
+                        )
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "Total biaya sewa pada periode ini",
+                            fontSize = 12.sp,
+                            color = TextSecondary
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(8.dp)
+                        ) {
+                            StatSubCard(
+                                label = "Transaksi",
+                                value = "${uiState.totalTransaksi}",
+                                valueColor = TextPrimary,
+                                modifier = Modifier.weight(1f)
+                            )
+
+                            StatSubCard(
+                                label = "Sudah Diterima",
+                                value = formatRupiah(uiState.sudahDiterima),
+                                valueColor = StatusGreen,
+                                modifier = Modifier.weight(1.2f)
+                            )
+
+                            StatSubCard(
+                                label = "Belum Dibayar",
+                                value = formatRupiah(uiState.belumDibayar),
+                                valueColor = StatusRed,
+                                modifier = Modifier.weight(1.2f)
+                            )
                         }
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(16.dp))
 
-            // 7. Section "Omzet per Kategori"
-            SectionTitle("Omzet per Kategori")
+                Box(modifier = Modifier.padding(horizontal = 16.dp)) {
+                    ReportBarChart(
+                        bars = uiState.chartBars,
+                        selectedIndex = uiState.selectedBarIndex,
+                        onBarSelected = { reportViewModel.selectBar(it) }
+                    )
+                }
 
-            if (uiState.categoryStats.isEmpty()) {
-                EmptySectionMessage("Belum ada transaksi pada periode ini.")
-            } else {
-                Card(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = DarkSurface)
-                ) {
-                    Column(modifier = Modifier.padding(16.dp)) {
-                        uiState.categoryStats.forEach { cat ->
-                            Column(modifier = Modifier.padding(vertical = 6.dp)) {
+                Spacer(modifier = Modifier.height(20.dp))
+
+                SectionTitle("Barang Paling Sering Disewa (Top 5)")
+
+                if (uiState.topItems.isEmpty()) {
+                    EmptySectionMessage("Belum ada transaksi pada periode ini.")
+                } else {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        shape = RoundedCornerShape(20.dp),
+                        border = BorderStroke(1.dp, GoldBorderColor),
+                        colors = CardDefaults.cardColors(containerColor = DarkSurface)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            uiState.topItems.forEachIndexed { index, item ->
                                 Row(
-                                    modifier = Modifier.fillMaxWidth(),
-                                    horizontalArrangement = Arrangement.SpaceBetween
-                                ) {
-                                    Text(cat.namaKategori, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
-                                    Text(formatRupiah(cat.totalOmzet), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AccentGold)
-                                }
-                                Spacer(modifier = Modifier.height(4.dp))
-                                LinearProgressIndicator(
-                                    progress = { cat.proportion },
                                     modifier = Modifier
                                         .fillMaxWidth()
-                                        .height(6.dp)
-                                        .clip(RoundedCornerShape(3.dp)),
-                                    color = AccentGold,
-                                    trackColor = DarkSurfaceVariant
-                                )
+                                        .padding(vertical = 6.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Text(
+                                        text = "${index + 1}. ${item.namaBarang}",
+                                        fontSize = 14.sp,
+                                        fontWeight = FontWeight.SemiBold,
+                                        color = TextPrimary
+                                    )
+                                    Text(
+                                        text = "${item.jumlahSewaCount}x disewa",
+                                        fontSize = 13.sp,
+                                        fontWeight = FontWeight.Bold,
+                                        color = AccentGold
+                                    )
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
-            // 8. Section "Daftar Transaksi"
-            Row(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text(
-                    text = "Daftar Transaksi (${uiState.allRentalsInPeriod.size})",
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary
-                )
+                SectionTitle("Omzet per Kategori")
 
-                if (uiState.allRentalsInPeriod.size > 10) {
-                    TextButton(onClick = { reportViewModel.setShowAllRentalsDialog(true) }) {
-                        Text("Lihat semua", color = AccentGold, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                if (uiState.categoryStats.isEmpty()) {
+                    EmptySectionMessage("Belum ada transaksi pada periode ini.")
+                } else {
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        shape = RoundedCornerShape(20.dp),
+                        border = BorderStroke(1.dp, GoldBorderColor),
+                        colors = CardDefaults.cardColors(containerColor = DarkSurface)
+                    ) {
+                        Column(modifier = Modifier.padding(16.dp)) {
+                            uiState.categoryStats.forEach { cat ->
+                                Column(modifier = Modifier.padding(vertical = 6.dp)) {
+                                    Row(
+                                        modifier = Modifier.fillMaxWidth(),
+                                        horizontalArrangement = Arrangement.SpaceBetween
+                                    ) {
+                                        Text(cat.namaKategori, fontSize = 14.sp, fontWeight = FontWeight.SemiBold, color = TextPrimary)
+                                        Text(formatRupiah(cat.totalOmzet), fontSize = 14.sp, fontWeight = FontWeight.Bold, color = AccentGold)
+                                    }
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    LinearProgressIndicator(
+                                        progress = { cat.proportion },
+                                        modifier = Modifier
+                                            .fillMaxWidth()
+                                            .height(6.dp)
+                                            .clip(RoundedCornerShape(3.dp)),
+                                        color = AccentGold,
+                                        trackColor = DarkSurfaceVariant
+                                    )
+                                }
+                            }
+                        }
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(8.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
-            if (uiState.recentRentals.isEmpty()) {
-                EmptySectionMessage("Belum ada transaksi pada periode ini.")
-            } else {
-                Column(
-                    modifier = Modifier.padding(horizontal = 16.dp),
-                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
                 ) {
-                    uiState.recentRentals.forEach { rental ->
-                        Card(
-                            modifier = Modifier.fillMaxWidth(),
-                            shape = RoundedCornerShape(10.dp),
-                            colors = CardDefaults.cardColors(containerColor = DarkSurface)
-                        ) {
-                            Row(
-                                modifier = Modifier
-                                    .fillMaxWidth()
-                                    .padding(12.dp),
-                                horizontalArrangement = Arrangement.SpaceBetween,
-                                verticalAlignment = Alignment.CenterVertically
+                    Text(
+                        text = "Daftar Transaksi (${uiState.allRentalsInPeriod.size})",
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+
+                    if (uiState.allRentalsInPeriod.size > 10) {
+                        TextButton(onClick = { reportViewModel.setShowAllRentalsDialog(true) }) {
+                            Text("Lihat semua", color = AccentGold, fontWeight = FontWeight.Bold, fontSize = 13.sp)
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                if (uiState.recentRentals.isEmpty()) {
+                    EmptySectionMessage("Belum ada transaksi pada periode ini.")
+                } else {
+                    Column(
+                        modifier = Modifier.padding(horizontal = 16.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        uiState.recentRentals.forEach { rental ->
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                shape = RoundedCornerShape(20.dp),
+                                border = BorderStroke(1.dp, GoldBorderColor),
+                                colors = CardDefaults.cardColors(containerColor = DarkSurface)
                             ) {
-                                Column(modifier = Modifier.weight(1f)) {
-                                    Text(rental.namaBarang, fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 14.sp)
-                                    Text("${rental.namaPenyewa} • ${formatDate(rental.dibuatPada)}", color = TextSecondary, fontSize = 12.sp)
+                                Row(
+                                    modifier = Modifier
+                                        .fillMaxWidth()
+                                        .padding(12.dp),
+                                    horizontalArrangement = Arrangement.SpaceBetween,
+                                    verticalAlignment = Alignment.CenterVertically
+                                ) {
+                                    Column(modifier = Modifier.weight(1f)) {
+                                        Text(rental.namaBarang, fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 14.sp)
+                                        Text("${rental.namaPenyewa} • ${formatDate(rental.dibuatPada)}", color = TextSecondary, fontSize = 12.sp)
+                                    }
+                                    Text(formatRupiah(rental.hargaTotal), fontWeight = FontWeight.Bold, color = AccentGold, fontSize = 14.sp)
                                 }
-                                Text(formatRupiah(rental.hargaTotal), fontWeight = FontWeight.Bold, color = AccentGold, fontSize = 14.sp)
                             }
                         }
                     }
@@ -438,7 +439,6 @@ fun ReportScreen(
         }
     }
 
-    // Dialog Lihat Semua Transaksi
     if (uiState.showAllRentalsDialog) {
         AllRentalsDialog(
             rentals = uiState.allRentalsInPeriod,
@@ -456,7 +456,7 @@ fun StatSubCard(
 ) {
     Box(
         modifier = modifier
-            .clip(RoundedCornerShape(8.dp))
+            .clip(RoundedCornerShape(12.dp))
             .background(DarkSurfaceVariant)
             .padding(10.dp),
         contentAlignment = Alignment.Center
@@ -486,7 +486,8 @@ fun EmptySectionMessage(msg: String) {
         modifier = Modifier
             .fillMaxWidth()
             .padding(horizontal = 16.dp),
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(1.dp, GoldBorderColor),
         colors = CardDefaults.cardColors(containerColor = DarkSurface)
     ) {
         Box(
@@ -500,9 +501,6 @@ fun EmptySectionMessage(msg: String) {
     }
 }
 
-/**
- * Dialog Menampilkan Semua Transaksi dalam Periode
- */
 @Composable
 fun AllRentalsDialog(
     rentals: List<Rental>,
@@ -514,7 +512,8 @@ fun AllRentalsDialog(
         modifier = Modifier
             .fillMaxSize()
             .padding(16.dp),
-        shape = RoundedCornerShape(16.dp),
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(1.dp, GoldBorderColor),
         colors = CardDefaults.cardColors(containerColor = DarkSurface)
     ) {
         Column(
@@ -549,7 +548,8 @@ fun AllRentalsDialog(
                 rentals.forEach { rental ->
                     Card(
                         modifier = Modifier.fillMaxWidth(),
-                        shape = RoundedCornerShape(10.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, GoldBorderColor),
                         colors = CardDefaults.cardColors(containerColor = DarkSurfaceVariant)
                     ) {
                         Column(modifier = Modifier.padding(12.dp)) {

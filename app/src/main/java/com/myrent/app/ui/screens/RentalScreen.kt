@@ -1,5 +1,6 @@
 package com.myrent.app.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -54,15 +55,18 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.myrent.app.R
 import com.myrent.app.data.items.Item
 import com.myrent.app.data.rentals.Rental
+import com.myrent.app.ui.components.AppBackground
 import com.myrent.app.ui.katalog.CatalogViewModel
 import com.myrent.app.ui.sewa.DetailSewaBottomSheet
 import com.myrent.app.ui.sewa.PilihBarangScreen
 import com.myrent.app.ui.sewa.RentalViewModel
 import com.myrent.app.ui.sewa.SewaBaruBottomSheet
 import com.myrent.app.ui.theme.AccentGold
-import com.myrent.app.ui.theme.DarkBackground
 import com.myrent.app.ui.theme.DarkSurface
 import com.myrent.app.ui.theme.DarkSurfaceVariant
+import com.myrent.app.ui.theme.GoldBorderColor
+import com.myrent.app.ui.theme.OnAccentGold
+import com.myrent.app.ui.theme.StatusRed
 import com.myrent.app.ui.theme.TextPrimary
 import com.myrent.app.ui.theme.TextSecondary
 import java.text.SimpleDateFormat
@@ -109,137 +113,145 @@ fun RentalScreen(
         return
     }
 
-    Scaffold(
-        modifier = Modifier
-            .fillMaxSize()
-            .background(DarkBackground),
-        containerColor = DarkBackground,
-        floatingActionButton = {
-            FloatingActionButton(
-                onClick = {
-                    rentalToEdit = null
-                    selectedItemForSewa = null
-                    rentalViewModel.resetUiState()
-                    showPilihBarangScreen = true
-                },
-                containerColor = AccentGold,
-                contentColor = DarkBackground,
-                shape = CircleShape,
-                modifier = Modifier.padding(bottom = 8.dp)
-            ) {
-                Row(
-                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-                    verticalAlignment = Alignment.CenterVertically
+    AppBackground {
+        Scaffold(
+            modifier = Modifier.fillMaxSize(),
+            containerColor = Color.Transparent,
+            floatingActionButton = {
+                FloatingActionButton(
+                    onClick = {
+                        rentalToEdit = null
+                        selectedItemForSewa = null
+                        rentalViewModel.resetUiState()
+                        showPilihBarangScreen = true
+                    },
+                    containerColor = AccentGold,
+                    contentColor = OnAccentGold,
+                    shape = CircleShape,
+                    modifier = Modifier.padding(bottom = 8.dp)
                 ) {
-                    Icon(imageVector = Icons.Filled.Add, contentDescription = "Sewa Baru", modifier = Modifier.size(20.dp))
-                    Spacer(modifier = Modifier.width(6.dp))
-                    Text(
-                        text = stringResource(R.string.btn_new_rental),
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 14.sp
-                    )
-                }
-            }
-        }
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-        ) {
-            Text(
-                text = stringResource(id = R.string.title_rentals),
-                fontSize = 22.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextPrimary,
-                modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp)
-            )
-
-            OutlinedTextField(
-                value = searchQuery,
-                onValueChange = { rentalViewModel.onSearchQueryChanged(it) },
-                placeholder = { Text(stringResource(R.string.placeholder_search_rental)) },
-                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Cari", tint = TextSecondary) },
-                singleLine = true,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp),
-                colors = OutlinedTextFieldDefaults.colors(
-                    focusedBorderColor = AccentGold,
-                    unfocusedBorderColor = DarkSurfaceVariant,
-                    focusedTextColor = TextPrimary,
-                    unfocusedTextColor = TextPrimary
-                )
-            )
-
-            Spacer(modifier = Modifier.height(8.dp))
-
-            LazyRow(
-                contentPadding = PaddingValues(horizontal = 16.dp),
-                horizontalArrangement = Arrangement.spacedBy(8.dp),
-                modifier = Modifier.fillMaxWidth()
-            ) {
-                items(filterOptions) { filter ->
-                    val isSelected = selectedFilter == filter
-                    FilterChip(
-                        selected = isSelected,
-                        onClick = { rentalViewModel.onFilterSelected(filter) },
-                        label = { Text(filter) },
-                        colors = FilterChipDefaults.filterChipColors(
-                            selectedContainerColor = AccentGold,
-                            selectedLabelColor = DarkBackground,
-                            containerColor = DarkSurfaceVariant,
-                            labelColor = TextSecondary
-                        )
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            if (rentals.isEmpty()) {
-                Box(
-                    modifier = Modifier
-                        .fillMaxSize()
-                        .padding(32.dp),
-                    contentAlignment = Alignment.Center
-                ) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Row(
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
                         Icon(
-                            imageVector = Icons.AutoMirrored.Filled.ReceiptLong,
-                            contentDescription = "Kosong",
-                            tint = TextSecondary,
-                            modifier = Modifier.size(64.dp)
+                            imageVector = Icons.Filled.Add,
+                            contentDescription = "Sewa Baru",
+                            tint = OnAccentGold,
+                            modifier = Modifier.size(20.dp)
                         )
-                        Spacer(modifier = Modifier.height(16.dp))
+                        Spacer(modifier = Modifier.width(6.dp))
                         Text(
-                            text = stringResource(R.string.empty_rentals_title),
-                            fontSize = 18.sp,
+                            text = stringResource(R.string.btn_new_rental),
                             fontWeight = FontWeight.Bold,
-                            color = TextPrimary
-                        )
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = stringResource(R.string.empty_rentals_desc),
                             fontSize = 14.sp,
-                            color = TextSecondary,
-                            textAlign = TextAlign.Center
+                            color = OnAccentGold
                         )
                     }
                 }
-            } else {
-                LazyColumn(
-                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 80.dp),
-                    verticalArrangement = Arrangement.spacedBy(10.dp),
-                    modifier = Modifier.fillMaxSize()
+            }
+        ) { innerPadding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+            ) {
+                Text(
+                    text = stringResource(id = R.string.title_rentals),
+                    fontSize = 22.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary,
+                    modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp)
+                )
+
+                OutlinedTextField(
+                    value = searchQuery,
+                    onValueChange = { rentalViewModel.onSearchQueryChanged(it) },
+                    placeholder = { Text(stringResource(R.string.placeholder_search_rental), color = TextSecondary) },
+                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Cari", tint = TextSecondary) },
+                    singleLine = true,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .padding(horizontal = 16.dp),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = AccentGold,
+                        unfocusedBorderColor = DarkSurfaceVariant,
+                        focusedContainerColor = DarkSurfaceVariant,
+                        unfocusedContainerColor = DarkSurfaceVariant,
+                        focusedTextColor = TextPrimary,
+                        unfocusedTextColor = TextPrimary
+                    )
+                )
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
                 ) {
-                    items(rentals, key = { it.id }) { rental ->
-                        RentalCard(
-                            rental = rental,
-                            onClick = {
-                                selectedRentalForDetail = rental
-                            }
+                    items(filterOptions) { filter ->
+                        val isSelected = selectedFilter == filter
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = { rentalViewModel.onFilterSelected(filter) },
+                            label = { Text(filter) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = AccentGold,
+                                selectedLabelColor = OnAccentGold,
+                                containerColor = DarkSurfaceVariant,
+                                labelColor = TextSecondary
+                            )
                         )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                if (rentals.isEmpty()) {
+                    Box(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(32.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                            Icon(
+                                imageVector = Icons.AutoMirrored.Filled.ReceiptLong,
+                                contentDescription = "Kosong",
+                                tint = TextSecondary,
+                                modifier = Modifier.size(64.dp)
+                            )
+                            Spacer(modifier = Modifier.height(16.dp))
+                            Text(
+                                text = stringResource(R.string.empty_rentals_title),
+                                fontSize = 18.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = stringResource(R.string.empty_rentals_desc),
+                                fontSize = 14.sp,
+                                color = TextSecondary,
+                                textAlign = TextAlign.Center
+                            )
+                        }
+                    }
+                } else {
+                    LazyColumn(
+                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 80.dp),
+                        verticalArrangement = Arrangement.spacedBy(10.dp),
+                        modifier = Modifier.fillMaxSize()
+                    ) {
+                        items(rentals, key = { it.id }) { rental ->
+                            RentalCard(
+                                rental = rental,
+                                onClick = {
+                                    selectedRentalForDetail = rental
+                                }
+                            )
+                        }
                     }
                 }
             }
@@ -276,7 +288,7 @@ fun RentalScreen(
 }
 
 /**
- * Kartu Transaksi Sewa di Daftar (Mendukung Status Terlambat dengan Badge Merah)
+ * Kartu Transaksi Sewa di Daftar (Sudut 20dp, Surface #35302B, Garis Emas 12% Alpha)
  */
 @Composable
 fun RentalCard(
@@ -299,7 +311,8 @@ fun RentalCard(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() },
-        shape = RoundedCornerShape(12.dp),
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(1.dp, GoldBorderColor),
         colors = CardDefaults.cardColors(containerColor = DarkSurface)
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
@@ -315,17 +328,16 @@ fun RentalCard(
                     color = TextPrimary
                 )
 
-                // Status Badge: Selesai (Hijau), Terlambat (Merah), Berjalan (Emas)
                 val (badgeBg, badgeText) = when {
                     rental.status == "selesai" -> Color(0xFF2E7D32) to stringResource(R.string.filter_completed)
-                    isOverdue -> Color(0xFFC62828) to "Terlambat"
-                    rental.status == "terlambat" -> Color(0xFFC62828) to stringResource(R.string.filter_overdue)
+                    isOverdue -> StatusRed to "Terlambat"
+                    rental.status == "terlambat" -> StatusRed to stringResource(R.string.filter_overdue)
                     else -> AccentGold to stringResource(R.string.filter_active)
                 }
 
                 Box(
                     modifier = Modifier
-                        .clip(RoundedCornerShape(4.dp))
+                        .clip(RoundedCornerShape(6.dp))
                         .background(badgeBg)
                         .padding(horizontal = 8.dp, vertical = 2.dp)
                 ) {
@@ -333,7 +345,7 @@ fun RentalCard(
                         text = badgeText,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (rental.status == "berjalan" && !isOverdue) DarkBackground else Color.White
+                        color = if (rental.status == "berjalan" && !isOverdue) OnAccentGold else Color.White
                     )
                 }
             }
@@ -356,7 +368,7 @@ fun RentalCard(
                 Text(
                     text = "${formatDate(rental.tanggalMulai)} - ${formatDate(rental.tanggalKembali)} (${rental.lamaHari} Hari)",
                     fontSize = 12.sp,
-                    color = if (isOverdue) Color(0xFFFF6B6B) else TextSecondary
+                    color = if (isOverdue) StatusRed else TextSecondary
                 )
 
                 val paymentText = if (rental.sisaBayar == 0L) {
@@ -365,7 +377,7 @@ fun RentalCard(
                     "SISA ${formatRupiah(rental.sisaBayar)}"
                 }
 
-                val paymentColor = if (rental.sisaBayar == 0L) Color(0xFF6BCB77) else Color(0xFFFF6B6B)
+                val paymentColor = if (rental.sisaBayar == 0L) Color(0xFF6BCB77) else StatusRed
 
                 Text(
                     text = paymentText,
@@ -378,9 +390,6 @@ fun RentalCard(
     }
 }
 
-/**
- * Helper Format Timestamp ke String Tanggal (contoh: 01 Nov 2025)
- */
 fun formatDate(timestamp: Long): String {
     val sdf = SimpleDateFormat("dd MMM yyyy", Locale("id", "ID"))
     return sdf.format(Date(timestamp))

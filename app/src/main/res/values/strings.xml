@@ -69,7 +69,7 @@
     <!-- Katalog -->
     <string name="title_catalog">Katalog Barang</string>
     <string name="filter_all">Semua</string>
-    <string name="btn_add_item">+ Tambah Barang</string>
+    <string name="btn_add_item">Tambah Barang</string>
     <string name="empty_items_title">Belum Ada Barang</string>
     <string name="empty_items_desc">Belum ada barang di toko ini. Ketuk + Tambah Barang untuk memulai.</string>
     <string name="status_available">Tersedia</string>

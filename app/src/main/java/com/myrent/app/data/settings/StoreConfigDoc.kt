@@ -25,7 +25,8 @@ object TemplateReplacer {
         "tanggal_kembali", "tanggal",
         "hari_telat", "telat",
         "nama_toko", "toko",
-        "telp_toko",
+        "telp_toko", "telp",
+        "alamat_toko", "alamat",
         "total", "dp", "sisa", "invoice", "nota", "catatan"
     )
 
@@ -42,7 +43,8 @@ object TemplateReplacer {
         catatan: String = "-",
         telat: String = "0",
         tanggalSewa: String = "",
-        telpToko: String = ""
+        telpToko: String = "",
+        alamatToko: String = ""
     ): String {
         if (template.isEmpty()) return ""
 
@@ -62,6 +64,9 @@ object TemplateReplacer {
             .replace("{nama_toko}", toko)
             .replace("{toko}", toko)
             .replace("{telp_toko}", telpToko)
+            .replace("{telp}", telpToko)
+            .replace("{alamat_toko}", alamatToko)
+            .replace("{alamat}", alamatToko)
             .replace("{total}", total)
             .replace("{dp}", dp)
             .replace("{sisa}", sisa)
@@ -70,7 +75,10 @@ object TemplateReplacer {
             .replace("{catatan}", catatan.ifEmpty { "-" })
 
         if (telpToko.isBlank()) {
-            result = result.replace("Telp/WA: ", "").replace("WA: ", "")
+            result = result.replace("Telp/WA: \n", "").replace("Telp/WA: ", "").replace("WA: ", "")
+        }
+        if (alamatToko.isBlank()) {
+            result = result.replace("\n\n", "\n")
         }
 
         return result
@@ -99,6 +107,8 @@ object DefaultStoreConfig {
 
     val TEMPLATE_NOTA_DEFAULT = """
         *NOTA TRANSAKSI SEWA - {nama_toko}*
+        {alamat_toko}
+        Telp/WA: {telp_toko}
         ------------------------------------
         *No. Nota*    : {invoice}
         *Pelanggan*   : {nama_penyewa}

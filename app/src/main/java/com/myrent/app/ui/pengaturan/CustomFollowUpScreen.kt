@@ -104,7 +104,8 @@ fun CustomFollowUpScreen(
         "{tanggal_kembali}" to "Tanggal Kembali",
         "{hari_telat}" to "Hari Telat (Khusus Telat)",
         "{nama_toko}" to "Nama Toko",
-        "{telp_toko}" to "No Telp Toko"
+        "{telp_toko}" to "No Telp Toko",
+        "{alamat_toko}" to "Alamat Toko"
     )
 
     fun insertTagAtCursor(tfv: TextFieldValue, tag: String): TextFieldValue {

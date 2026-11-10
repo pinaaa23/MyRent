@@ -187,7 +187,6 @@ fun SewaBaruBottomSheet(
             cabangNama = userDoc.namaToko.ifEmpty { "MYRENT STORE" },
             onBack = { showPaymentScreen = false },
             onKonfirmasiPembayaran = { metode ->
-                showPaymentScreen = false
                 if (isEditMode) {
                     viewModel.updateSewa(
                         rental = rentalToEdit!!,
@@ -201,7 +200,10 @@ fun SewaBaruBottomSheet(
                         dp = dpLong,
                         metodePembayaran = metode,
                         catatan = catatan,
-                        onSuccess = onDismiss
+                        onSuccess = {
+                            showPaymentScreen = false
+                            onDismiss()
+                        }
                     )
                 } else {
                     viewModel.prosesPembayaranDanSimpanSewa(
@@ -217,6 +219,7 @@ fun SewaBaruBottomSheet(
                         metodePembayaran = metode,
                         catatan = catatan,
                         onSuccess = { savedRental ->
+                            showPaymentScreen = false
                             createdRentalForNota = savedRental
                         }
                     )

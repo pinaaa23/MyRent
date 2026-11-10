@@ -1,5 +1,6 @@
 package com.myrent.app.ui.screens
 
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -56,12 +57,14 @@ import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.myrent.app.R
 import com.myrent.app.data.foto.FotoRepository
+import com.myrent.app.ui.components.AppBackground
 import com.myrent.app.ui.pengaturan.KelolaKategoriDialog
 import com.myrent.app.ui.pengaturan.SettingsViewModel
 import com.myrent.app.ui.theme.AccentGold
-import com.myrent.app.ui.theme.DarkBackground
 import com.myrent.app.ui.theme.DarkSurface
 import com.myrent.app.ui.theme.DarkSurfaceVariant
+import com.myrent.app.ui.theme.GoldBorderColor
+import com.myrent.app.ui.theme.OnAccentGold
 import com.myrent.app.ui.theme.TextPrimary
 import com.myrent.app.ui.theme.TextSecondary
 
@@ -92,168 +95,170 @@ fun SettingsScreen(
     val displayFotoBase64 = storeProfile.fotoBase64.ifEmpty { userDoc.fotoProfilBase64 }
     val displayNamaToko = storeProfile.nama.ifEmpty { userNamaToko }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.title_settings), color = TextPrimary, fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onNavigateBack) {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali", tint = TextPrimary)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkBackground)
-            )
-        },
-        containerColor = DarkBackground
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(16.dp)
-        ) {
-            // Kartu Profil Pengguna & Nama Toko (Dapat Diketuk -> Profil Toko)
-            Card(
+    AppBackground {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text(stringResource(R.string.title_settings), color = TextPrimary, fontWeight = FontWeight.Bold) },
+                    navigationIcon = {
+                        IconButton(onClick = onNavigateBack) {
+                            Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali", tint = TextPrimary)
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
+                )
+            },
+            containerColor = Color.Transparent
+        ) { innerPadding ->
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { onNavigateToStoreProfile() },
-                shape = RoundedCornerShape(12.dp),
-                colors = CardDefaults.cardColors(containerColor = DarkSurface)
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(16.dp)
             ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                // Kartu Profil Pengguna & Nama Toko
+                Card(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { onNavigateToStoreProfile() },
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(1.dp, GoldBorderColor),
+                    colors = CardDefaults.cardColors(containerColor = DarkSurface)
                 ) {
-                    val avatarBitmap = remember(displayFotoBase64) {
-                        if (displayFotoBase64.isNotEmpty()) fotoRepo.base64ToBitmap(displayFotoBase64) else null
-                    }
-
-                    Box(
-                        modifier = Modifier
-                            .size(56.dp)
-                            .clip(CircleShape)
-                            .background(DarkSurfaceVariant),
-                        contentAlignment = Alignment.Center
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
                     ) {
-                        if (avatarBitmap != null) {
-                            Image(
-                                bitmap = avatarBitmap.asImageBitmap(),
-                                contentDescription = "Foto Toko",
-                                contentScale = ContentScale.Crop,
-                                modifier = Modifier.fillMaxSize()
-                            )
-                        } else {
-                            Icon(
-                                imageVector = Icons.Filled.Person,
-                                contentDescription = "Profil",
-                                tint = AccentGold,
-                                modifier = Modifier.size(30.dp)
-                            )
+                        val avatarBitmap = remember(displayFotoBase64) {
+                            if (displayFotoBase64.isNotEmpty()) fotoRepo.base64ToBitmap(displayFotoBase64) else null
                         }
-                    }
 
-                    Spacer(modifier = Modifier.width(16.dp))
+                        Box(
+                            modifier = Modifier
+                                .size(56.dp)
+                                .clip(CircleShape)
+                                .background(DarkSurfaceVariant),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            if (avatarBitmap != null) {
+                                Image(
+                                    bitmap = avatarBitmap.asImageBitmap(),
+                                    contentDescription = "Foto Toko",
+                                    contentScale = ContentScale.Crop,
+                                    modifier = Modifier.fillMaxSize()
+                                )
+                            } else {
+                                Icon(
+                                    imageVector = Icons.Filled.Person,
+                                    contentDescription = "Profil",
+                                    tint = AccentGold,
+                                    modifier = Modifier.size(30.dp)
+                                )
+                            }
+                        }
 
-                    Column(modifier = Modifier.weight(1f)) {
-                        Row(verticalAlignment = Alignment.CenterVertically) {
-                            Icon(
-                                imageVector = Icons.Filled.Store,
-                                contentDescription = "Toko",
-                                tint = AccentGold,
-                                modifier = Modifier.size(16.dp)
-                            )
-                            Spacer(modifier = Modifier.width(4.dp))
+                        Spacer(modifier = Modifier.width(16.dp))
+
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    imageVector = Icons.Filled.Store,
+                                    contentDescription = "Toko",
+                                    tint = AccentGold,
+                                    modifier = Modifier.size(16.dp)
+                                )
+                                Spacer(modifier = Modifier.width(4.dp))
+                                Text(
+                                    text = displayNamaToko.ifEmpty { "Nama toko belum diisi" },
+                                    fontSize = 17.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimary
+                                )
+                            }
+                            Spacer(modifier = Modifier.height(2.dp))
                             Text(
-                                text = displayNamaToko.ifEmpty { "Nama toko belum diisi" },
-                                fontSize = 17.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = TextPrimary
+                                text = if (userName.isNotEmpty()) "Pemilik: $userName" else "Pemilik Toko",
+                                fontSize = 13.sp,
+                                color = AccentGold,
+                                fontWeight = FontWeight.Medium
+                            )
+                            Spacer(modifier = Modifier.height(2.dp))
+                            Text(
+                                text = userEmail,
+                                fontSize = 12.sp,
+                                color = TextSecondary
                             )
                         }
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = if (userName.isNotEmpty()) "Pemilik: $userName" else "Pemilik Toko",
-                            fontSize = 13.sp,
-                            color = AccentGold,
-                            fontWeight = FontWeight.Medium
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
-                        Text(
-                            text = userEmail,
-                            fontSize = 12.sp,
-                            color = TextSecondary
-                        )
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.height(20.dp))
+                Spacer(modifier = Modifier.height(20.dp))
 
-            // Menu 1: Profil Toko
-            SettingsMenuItem(
-                title = "Profil Toko",
-                icon = Icons.Filled.Store,
-                onClick = onNavigateToStoreProfile
-            )
+                // Menu 1: Profil Toko
+                SettingsMenuItem(
+                    title = "Profil Toko",
+                    icon = Icons.Filled.Store,
+                    onClick = onNavigateToStoreProfile
+                )
 
-            Spacer(modifier = Modifier.height(12.dp))
+                Spacer(modifier = Modifier.height(12.dp))
 
-            // Menu 2: Kelola Kategori
-            SettingsMenuItem(
-                title = stringResource(R.string.menu_manage_category),
-                icon = Icons.Filled.Category,
-                onClick = {
-                    settingsViewModel.resetUiState()
-                    showKelolaKategoriDialog = true
+                // Menu 2: Kelola Kategori
+                SettingsMenuItem(
+                    title = stringResource(R.string.menu_manage_category),
+                    icon = Icons.Filled.Category,
+                    onClick = {
+                        settingsViewModel.resetUiState()
+                        showKelolaKategoriDialog = true
+                    }
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Menu 3: Kustom Nota
+                SettingsMenuItem(
+                    title = "Kustom Nota",
+                    icon = Icons.Filled.Receipt,
+                    onClick = onNavigateToCustomReceipt
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Menu 4: Kustom Pesan Follow Up
+                SettingsMenuItem(
+                    title = "Kustom Pesan Follow Up",
+                    icon = Icons.AutoMirrored.Filled.Message,
+                    onClick = onNavigateToWaTemplates
+                )
+
+                Spacer(modifier = Modifier.weight(1f))
+
+                // Tombol Keluar (Logout)
+                Button(
+                    onClick = { showLogoutConfirmDialog = true },
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(50.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(
+                        containerColor = DarkSurfaceVariant,
+                        contentColor = Color(0xFFFF6B6B)
+                    )
+                ) {
+                    Icon(imageVector = Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Keluar")
+                    Spacer(modifier = Modifier.width(8.dp))
+                    Text(
+                        text = stringResource(R.string.btn_logout),
+                        fontSize = 16.sp,
+                        fontWeight = FontWeight.Bold
+                    )
                 }
-            )
 
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Menu 3: Kustom Nota
-            SettingsMenuItem(
-                title = "Kustom Nota",
-                icon = Icons.Filled.Receipt,
-                onClick = onNavigateToCustomReceipt
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Menu 4: Kustom Pesan Follow Up
-            SettingsMenuItem(
-                title = "Kustom Pesan Follow Up",
-                icon = Icons.AutoMirrored.Filled.Message,
-                onClick = onNavigateToWaTemplates
-            )
-
-            Spacer(modifier = Modifier.weight(1f))
-
-            // Tombol Keluar (Logout)
-            Button(
-                onClick = { showLogoutConfirmDialog = true },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(50.dp),
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(
-                    containerColor = DarkSurfaceVariant,
-                    contentColor = Color(0xFFFF6B6B)
-                )
-            ) {
-                Icon(imageVector = Icons.AutoMirrored.Filled.ExitToApp, contentDescription = "Keluar")
-                Spacer(modifier = Modifier.width(8.dp))
-                Text(
-                    text = stringResource(R.string.btn_logout),
-                    fontSize = 16.sp,
-                    fontWeight = FontWeight.Bold
-                )
+                Spacer(modifier = Modifier.height(16.dp))
             }
-
-            Spacer(modifier = Modifier.height(16.dp))
         }
     }
 
-    // Dialog Kelola Kategori
     if (showKelolaKategoriDialog) {
         KelolaKategoriDialog(
             viewModel = settingsViewModel,
@@ -261,7 +266,6 @@ fun SettingsScreen(
         )
     }
 
-    // Dialog Konfirmasi Keluar (Logout)
     if (showLogoutConfirmDialog) {
         AlertDialog(
             onDismissRequest = { showLogoutConfirmDialog = false },
@@ -296,7 +300,8 @@ fun SettingsMenuItem(
         modifier = Modifier
             .fillMaxWidth()
             .clickable { onClick() },
-        shape = RoundedCornerShape(10.dp),
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(1.dp, GoldBorderColor),
         colors = CardDefaults.cardColors(containerColor = DarkSurface)
     ) {
         Row(

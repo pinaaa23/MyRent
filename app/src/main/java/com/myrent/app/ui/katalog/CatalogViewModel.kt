@@ -25,7 +25,7 @@ sealed class CatalogUiState {
 }
 
 /**
- * ViewModel untuk mengelola data Katalog, Stok Barang, dan formulir Tambah/Edit barang (Tanpa Filter Cabang)
+ * ViewModel untuk mengelola data Katalog, Stok Barang, Kategori Inline, dan formulir Tambah/Edit barang
  */
 class CatalogViewModel(
     private val itemRepository: ItemRepository = ItemRepository(),
@@ -63,6 +63,28 @@ class CatalogViewModel(
 
     fun selectKategori(nama: String) {
         _selectedKategori.value = nama
+    }
+
+    /**
+     * Menambah kategori baru secara langsung dari formulir Tambah Barang (Inline)
+     */
+    fun tambahKategoriInline(nama: String, onSuccess: (String) -> Unit) {
+        val trimmed = nama.trim()
+        if (trimmed.isEmpty()) {
+            _uiState.value = CatalogUiState.Error("Nama kategori tidak boleh kosong.")
+            return
+        }
+
+        viewModelScope.launch {
+            _uiState.value = CatalogUiState.Loading
+            val result = kategoriRepository.tambahKategori(trimmed)
+            result.onSuccess {
+                _uiState.value = CatalogUiState.Idle
+                onSuccess(trimmed)
+            }.onFailure { e ->
+                _uiState.value = CatalogUiState.Error(e.message ?: "Gagal menambah kategori.")
+            }
+        }
     }
 
     fun simpanItem(

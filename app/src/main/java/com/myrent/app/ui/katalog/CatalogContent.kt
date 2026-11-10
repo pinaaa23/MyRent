@@ -53,15 +53,17 @@ import com.myrent.app.data.items.Item
 import com.myrent.app.data.kategori.Kategori
 import com.myrent.app.ui.screens.formatRupiah
 import com.myrent.app.ui.theme.AccentGold
-import com.myrent.app.ui.theme.DarkBackground
 import com.myrent.app.ui.theme.DarkSurface
 import com.myrent.app.ui.theme.DarkSurfaceVariant
+import com.myrent.app.ui.theme.GoldBorderColor
+import com.myrent.app.ui.theme.OnAccentGold
+import com.myrent.app.ui.theme.StatusGreen
+import com.myrent.app.ui.theme.StatusRed
 import com.myrent.app.ui.theme.TextPrimary
 import com.myrent.app.ui.theme.TextSecondary
 
 /**
  * Komponen reusable Katalog Barang (Grid 2 Kolom, Pencarian, & Filter Kategori)
- * Dapat digunakan pada Layar Kelola Katalog maupun Layar Pilih Barang (Mode Pilih)
  */
 @Composable
 fun CatalogContent(
@@ -78,15 +80,13 @@ fun CatalogContent(
     modifier: Modifier = Modifier
 ) {
     Column(
-        modifier = modifier
-            .fillMaxSize()
-            .background(DarkBackground)
+        modifier = modifier.fillMaxSize()
     ) {
-        // Kolom Pencarian (Di Mode Pilih atau Kelola)
+        // Kolom Pencarian
         OutlinedTextField(
             value = searchQuery,
             onValueChange = onSearchQueryChanged,
-            placeholder = { Text("Cari nama barang...") },
+            placeholder = { Text("Cari nama barang...", color = TextSecondary) },
             leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Cari", tint = TextSecondary) },
             singleLine = true,
             modifier = Modifier
@@ -95,6 +95,8 @@ fun CatalogContent(
             colors = OutlinedTextFieldDefaults.colors(
                 focusedBorderColor = AccentGold,
                 unfocusedBorderColor = DarkSurfaceVariant,
+                focusedContainerColor = DarkSurfaceVariant,
+                unfocusedContainerColor = DarkSurfaceVariant,
                 focusedTextColor = TextPrimary,
                 unfocusedTextColor = TextPrimary
             )
@@ -114,7 +116,7 @@ fun CatalogContent(
                     label = { Text(stringResource(R.string.filter_all)) },
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = AccentGold,
-                        selectedLabelColor = DarkBackground,
+                        selectedLabelColor = OnAccentGold,
                         containerColor = DarkSurfaceVariant,
                         labelColor = TextSecondary
                     )
@@ -129,7 +131,7 @@ fun CatalogContent(
                     label = { Text(kat.nama) },
                     colors = FilterChipDefaults.filterChipColors(
                         selectedContainerColor = AccentGold,
-                        selectedLabelColor = DarkBackground,
+                        selectedLabelColor = OnAccentGold,
                         containerColor = DarkSurfaceVariant,
                         labelColor = TextSecondary
                     )
@@ -139,7 +141,6 @@ fun CatalogContent(
 
         Spacer(modifier = Modifier.height(12.dp))
 
-        // Tampilan Kosong atau Grid Barang
         if (items.isEmpty()) {
             Box(
                 modifier = Modifier
@@ -204,7 +205,7 @@ fun CatalogContent(
 }
 
 /**
- * Kartu Item Barang Reusable
+ * Kartu Item Barang Reusable (Sudut 20dp, Surface #35302B, Garis Emas 12% Alpha)
  */
 @Composable
 fun ReusableItemCard(
@@ -226,14 +227,13 @@ fun ReusableItemCard(
             .fillMaxWidth()
             .alpha(cardAlpha)
             .clickable(enabled = !isSelectMode || isAvailable) { onClick() },
-        shape = RoundedCornerShape(12.dp),
-        border = if (isSelected) BorderStroke(2.dp, AccentGold) else null,
+        shape = RoundedCornerShape(20.dp),
+        border = BorderStroke(1.dp, if (isSelected) AccentGold else GoldBorderColor),
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) DarkSurfaceVariant else DarkSurface
         )
     ) {
         Column {
-            // Gambar Barang
             Box(
                 modifier = Modifier
                     .fillMaxWidth()
@@ -257,14 +257,13 @@ fun ReusableItemCard(
                     )
                 }
 
-                // Badge Status & Stok
                 val (badgeBg, badgeText) = when {
                     item.stokTersedia == 0 -> AccentGold to stringResource(R.string.status_rented)
-                    item.status == "perbaikan" -> Color(0xFFC62828) to stringResource(R.string.status_maintenance)
-                    else -> Color(0xFF2E7D32) to "Tersedia (${item.stokTersedia})"
+                    item.status == "perbaikan" -> StatusRed to stringResource(R.string.status_maintenance)
+                    else -> StatusGreen to "Tersedia (${item.stokTersedia})"
                 }
 
-                val textColor = if (item.stokTersedia == 0) DarkBackground else Color.White
+                val textColor = if (item.stokTersedia == 0) OnAccentGold else Color.White
 
                 Box(
                     modifier = Modifier
@@ -283,7 +282,6 @@ fun ReusableItemCard(
                 }
             }
 
-            // Detail Barang
             Column(modifier = Modifier.padding(12.dp)) {
                 Text(
                     text = item.nama,

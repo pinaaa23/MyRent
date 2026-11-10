@@ -9,7 +9,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
 /**
- * Repository pengelola Kustom Nota & Template Pesan WA terisolasi per toko (toko/{uid}/settings/config)
+ * Repository pengelola Kustom Nota & Template Pesan WA terisolasi per toko (toko/{uid}/pengaturan/nota)
  */
 class StoreConfigRepository(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
@@ -22,7 +22,7 @@ class StoreConfigRepository(
         get() = auth.currentUser?.isEmailVerified == true
 
     private fun getConfigDocRef(uid: String = currentUid) =
-        firestore.collection("toko").document(uid.ifEmpty { "global" }).collection("settings").document("config")
+        firestore.collection("toko").document(uid.ifEmpty { "global" }).collection("pengaturan").document("nota")
 
     /**
      * Aliran data realtime StoreConfigDoc via Flow
@@ -42,12 +42,12 @@ class StoreConfigRepository(
             }
 
             val doc = StoreConfigDoc(
-                notaHeader = snapshot.getString("notaHeader") ?: "",
-                notaFooter = snapshot.getString("notaFooter") ?: "",
-                templatePesanNota = snapshot.getString("templatePesanNota") ?: "",
-                templatePesanH1 = snapshot.getString("templatePesanH1") ?: "",
-                templatePesanH = snapshot.getString("templatePesanH") ?: "",
-                templatePesanTelat = snapshot.getString("templatePesanTelat") ?: ""
+                notaHeader = snapshot.getString("notaHeader") ?: snapshot.getString("kalimatPembuka") ?: "",
+                notaFooter = snapshot.getString("notaFooter") ?: snapshot.getString("catatanBawah") ?: "",
+                templatePesanNota = snapshot.getString("templatePesanNota") ?: snapshot.getString("templateFollowUpNota") ?: "",
+                templatePesanH1 = snapshot.getString("templateFollowUpH1") ?: snapshot.getString("templatePesanH1") ?: "",
+                templatePesanH = snapshot.getString("templateFollowUpHariH") ?: snapshot.getString("templatePesanH") ?: "",
+                templatePesanTelat = snapshot.getString("templateFollowUpTelat") ?: snapshot.getString("templatePesanTelat") ?: ""
             )
 
             trySend(doc)
@@ -67,12 +67,12 @@ class StoreConfigRepository(
         if (!snapshot.exists()) return Result.success(StoreConfigDoc())
 
         StoreConfigDoc(
-            notaHeader = snapshot.getString("notaHeader") ?: "",
-            notaFooter = snapshot.getString("notaFooter") ?: "",
-            templatePesanNota = snapshot.getString("templatePesanNota") ?: "",
-            templatePesanH1 = snapshot.getString("templatePesanH1") ?: "",
-            templatePesanH = snapshot.getString("templatePesanH") ?: "",
-            templatePesanTelat = snapshot.getString("templatePesanTelat") ?: ""
+            notaHeader = snapshot.getString("notaHeader") ?: snapshot.getString("kalimatPembuka") ?: "",
+            notaFooter = snapshot.getString("notaFooter") ?: snapshot.getString("catatanBawah") ?: "",
+            templatePesanNota = snapshot.getString("templatePesanNota") ?: snapshot.getString("templateFollowUpNota") ?: "",
+            templatePesanH1 = snapshot.getString("templateFollowUpH1") ?: snapshot.getString("templatePesanH1") ?: "",
+            templatePesanH = snapshot.getString("templateFollowUpHariH") ?: snapshot.getString("templatePesanH") ?: "",
+            templatePesanTelat = snapshot.getString("templateFollowUpTelat") ?: snapshot.getString("templatePesanTelat") ?: ""
         )
     }
 
@@ -85,7 +85,10 @@ class StoreConfigRepository(
 
         val map = mapOf(
             "notaHeader" to header.trim(),
-            "notaFooter" to footer.trim()
+            "kalimatPembuka" to header.trim(),
+            "notaFooter" to footer.trim(),
+            "catatanBawah" to footer.trim(),
+            "updatedAt" to System.currentTimeMillis()
         )
         getConfigDocRef(uid).set(map, SetOptions.merge()).await()
     }
@@ -101,15 +104,17 @@ class StoreConfigRepository(
     ): Result<Unit> = runCatching {
         val uid = currentUid
         require(uid.isNotEmpty() && isEmailVerified) { "Pengguna belum login atau email belum diverifikasi" }
-        require(templateNota.isNotBlank() && templateH1.isNotBlank() && templateH.isNotBlank()) {
-            "Template pesan tidak boleh kosong."
-        }
 
         val map = mapOf(
             "templatePesanNota" to templateNota.trim(),
+            "templateFollowUpNota" to templateNota.trim(),
             "templatePesanH1" to templateH1.trim(),
+            "templateFollowUpH1" to templateH1.trim(),
             "templatePesanH" to templateH.trim(),
-            "templatePesanTelat" to templateTelat.trim()
+            "templateFollowUpHariH" to templateH.trim(),
+            "templatePesanTelat" to templateTelat.trim(),
+            "templateFollowUpTelat" to templateTelat.trim(),
+            "updatedAt" to System.currentTimeMillis()
         )
         getConfigDocRef(uid).set(map, SetOptions.merge()).await()
     }
