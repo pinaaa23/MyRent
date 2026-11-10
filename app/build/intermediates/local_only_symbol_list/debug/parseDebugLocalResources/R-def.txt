@@ -4,6 +4,7 @@ color accent_gold
 color dark_background
 color dark_surface
 drawable ic_launcher_foreground
+drawable ic_myrent_logo
 mipmap ic_launcher
 mipmap ic_launcher_round
 string app_name

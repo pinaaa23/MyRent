@@ -27,15 +27,14 @@ data class BarChartItem(
 )
 
 /**
- * Class murni helper tanggal & periode untuk Zona Waktu Asia/Jakarta (WIB)
+ * Class murni helper tanggal & periode untuk Zona Waktu Lokal Perangkat
  */
 object ReportPeriodHelper {
 
-    private val timeZone = TimeZone.getTimeZone("Asia/Jakarta")
     private val locale = Locale("id", "ID")
 
     fun getCalendar(): Calendar {
-        val cal = Calendar.getInstance(timeZone, locale)
+        val cal = Calendar.getInstance(TimeZone.getDefault(), locale)
         cal.firstDayOfWeek = Calendar.MONDAY // Minggu dimulai hari Senin
         return cal
     }
@@ -56,9 +55,7 @@ object ReportPeriodHelper {
                 setEndOfDay(cal)
                 val endMs = cal.timeInMillis
 
-                val sdfText = SimpleDateFormat("dd MMM yyyy", locale).apply { this.timeZone =
-                    timeZone
-                }
+                val sdfText = SimpleDateFormat("dd MMM yyyy", locale).apply { this.timeZone = TimeZone.getDefault() }
                 val displayText = sdfText.format(Date(startMs))
 
                 val isCurrent = isSameDay(startMs, nowMs)
@@ -75,8 +72,8 @@ object ReportPeriodHelper {
                 setEndOfDay(cal)
                 val endMs = cal.timeInMillis
 
-                val sdfDay = SimpleDateFormat("dd MMM", locale).apply { this.timeZone = timeZone }
-                val sdfYear = SimpleDateFormat("yyyy", locale).apply { this.timeZone = timeZone }
+                val sdfDay = SimpleDateFormat("dd MMM", locale).apply { this.timeZone = TimeZone.getDefault() }
+                val sdfYear = SimpleDateFormat("yyyy", locale).apply { this.timeZone = TimeZone.getDefault() }
                 val displayText = "${sdfDay.format(Date(startMs))} - ${sdfDay.format(Date(endMs))} ${sdfYear.format(Date(endMs))}"
 
                 val isCurrent = nowMs in startMs..endMs
@@ -94,9 +91,7 @@ object ReportPeriodHelper {
                 setEndOfDay(cal)
                 val endMs = cal.timeInMillis
 
-                val sdfMonth = SimpleDateFormat("MMMM yyyy", locale).apply { this.timeZone =
-                    timeZone
-                }
+                val sdfMonth = SimpleDateFormat("MMMM yyyy", locale).apply { this.timeZone = TimeZone.getDefault() }
                 val displayText = sdfMonth.format(Date(startMs))
 
                 val isCurrent = nowMs in startMs..endMs
@@ -114,7 +109,7 @@ object ReportPeriodHelper {
                 setEndOfDay(cal)
                 val endMs = cal.timeInMillis
 
-                val sdfYear = SimpleDateFormat("yyyy", locale).apply { this.timeZone = timeZone }
+                val sdfYear = SimpleDateFormat("yyyy", locale).apply { this.timeZone = TimeZone.getDefault() }
                 val displayText = sdfYear.format(Date(startMs))
 
                 val isCurrent = nowMs in startMs..endMs
@@ -132,17 +127,12 @@ object ReportPeriodHelper {
 
         when (periodType) {
             PeriodType.HARI -> {
-                // 7 hari terakhir yang berakhir di hari terpilih
                 cal.timeInMillis = periodRange.endMs
                 setStartOfDay(cal)
-
-                // Mundur 6 hari dari hari terpilih
                 cal.add(Calendar.DAY_OF_YEAR, -6)
 
-                val sdfShort = SimpleDateFormat("EEE", locale).apply { this.timeZone = timeZone }
-                val sdfFull = SimpleDateFormat("EEE, dd MMM yyyy", locale).apply { this.timeZone =
-                    timeZone
-                }
+                val sdfShort = SimpleDateFormat("EEE", locale).apply { this.timeZone = TimeZone.getDefault() }
+                val sdfFull = SimpleDateFormat("EEE, dd MMM yyyy", locale).apply { this.timeZone = TimeZone.getDefault() }
 
                 for (i in 0..6) {
                     setStartOfDay(cal)
@@ -164,12 +154,9 @@ object ReportPeriodHelper {
             }
 
             PeriodType.MINGGU -> {
-                // Senin s/d Minggu
                 cal.timeInMillis = periodRange.startMs
-                val sdfShort = SimpleDateFormat("EEE", locale).apply { this.timeZone = timeZone }
-                val sdfFull = SimpleDateFormat("EEEE, dd MMM yyyy", locale).apply { this.timeZone =
-                    timeZone
-                }
+                val sdfShort = SimpleDateFormat("EEE", locale).apply { this.timeZone = TimeZone.getDefault() }
+                val sdfFull = SimpleDateFormat("EEEE, dd MMM yyyy", locale).apply { this.timeZone = TimeZone.getDefault() }
 
                 for (i in 0..6) {
                     setStartOfDay(cal)
@@ -191,12 +178,9 @@ object ReportPeriodHelper {
             }
 
             PeriodType.BULAN -> {
-                // Batang per minggu dalam bulan itu (1-7, 8-14, 15-21, 22-28, 29-akhir)
                 cal.timeInMillis = periodRange.startMs
                 val maxDays = cal.getActualMaximum(Calendar.DAY_OF_MONTH)
-                val sdfMonthYear = SimpleDateFormat("MMM yyyy", locale).apply { this.timeZone =
-                    timeZone
-                }
+                val sdfMonthYear = SimpleDateFormat("MMM yyyy", locale).apply { this.timeZone = TimeZone.getDefault() }
 
                 val weekRanges = listOf(
                     1..7,
@@ -232,12 +216,9 @@ object ReportPeriodHelper {
             }
 
             PeriodType.TAHUN -> {
-                // 12 bulan (Jan - Des)
                 cal.timeInMillis = periodRange.startMs
-                val sdfShort = SimpleDateFormat("MMM", locale).apply { this.timeZone = timeZone }
-                val sdfFull = SimpleDateFormat("MMMM yyyy", locale).apply { this.timeZone =
-                    timeZone
-                }
+                val sdfShort = SimpleDateFormat("MMM", locale).apply { this.timeZone = TimeZone.getDefault() }
+                val sdfFull = SimpleDateFormat("MMMM yyyy", locale).apply { this.timeZone = TimeZone.getDefault() }
 
                 for (m in 0..11) {
                     cal.set(Calendar.MONTH, m)

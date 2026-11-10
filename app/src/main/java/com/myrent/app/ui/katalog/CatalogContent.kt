@@ -15,6 +15,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
@@ -63,7 +64,7 @@ import com.myrent.app.ui.theme.TextPrimary
 import com.myrent.app.ui.theme.TextSecondary
 
 /**
- * Komponen reusable Katalog Barang (Grid 2 Kolom, Pencarian, & Filter Kategori)
+ * Komponen reusable Katalog Barang Adaptif & Responsif (Grid Adaptif HP/Tablet, Pencarian, & Filter Kategori)
  */
 @Composable
 fun CatalogContent(
@@ -79,125 +80,133 @@ fun CatalogContent(
     onItemClick: (Item) -> Unit,
     modifier: Modifier = Modifier
 ) {
-    Column(
-        modifier = modifier.fillMaxSize()
+    Box(
+        modifier = modifier.fillMaxSize(),
+        contentAlignment = Alignment.TopCenter
     ) {
-        // Kolom Pencarian
-        OutlinedTextField(
-            value = searchQuery,
-            onValueChange = onSearchQueryChanged,
-            placeholder = { Text("Cari nama barang...", color = TextSecondary) },
-            leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Cari", tint = TextSecondary) },
-            singleLine = true,
+        Column(
             modifier = Modifier
-                .fillMaxWidth()
-                .padding(horizontal = 16.dp, vertical = 8.dp),
-            colors = OutlinedTextFieldDefaults.colors(
-                focusedBorderColor = AccentGold,
-                unfocusedBorderColor = DarkSurfaceVariant,
-                focusedContainerColor = DarkSurfaceVariant,
-                unfocusedContainerColor = DarkSurfaceVariant,
-                focusedTextColor = TextPrimary,
-                unfocusedTextColor = TextPrimary
-            )
-        )
-
-        // Filter Chips Kategori
-        LazyRow(
-            contentPadding = PaddingValues(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            modifier = Modifier.fillMaxWidth()
+                .fillMaxSize()
+                .widthIn(max = 1000.dp)
         ) {
-            item {
-                val isSelected = selectedKategori == "Semua"
-                FilterChip(
-                    selected = isSelected,
-                    onClick = { onKategoriSelected("Semua") },
-                    label = { Text(stringResource(R.string.filter_all)) },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = AccentGold,
-                        selectedLabelColor = OnAccentGold,
-                        containerColor = DarkSurfaceVariant,
-                        labelColor = TextSecondary
-                    )
-                )
-            }
-
-            items(kategoriList) { kat ->
-                val isSelected = selectedKategori == kat.nama
-                FilterChip(
-                    selected = isSelected,
-                    onClick = { onKategoriSelected(kat.nama) },
-                    label = { Text(kat.nama) },
-                    colors = FilterChipDefaults.filterChipColors(
-                        selectedContainerColor = AccentGold,
-                        selectedLabelColor = OnAccentGold,
-                        containerColor = DarkSurfaceVariant,
-                        labelColor = TextSecondary
-                    )
-                )
-            }
-        }
-
-        Spacer(modifier = Modifier.height(12.dp))
-
-        if (items.isEmpty()) {
-            Box(
+            // Kolom Pencarian
+            OutlinedTextField(
+                value = searchQuery,
+                onValueChange = onSearchQueryChanged,
+                placeholder = { Text("Cari nama barang...", color = TextSecondary) },
+                leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Cari", tint = TextSecondary) },
+                singleLine = true,
                 modifier = Modifier
-                    .fillMaxSize()
-                    .padding(32.dp),
-                contentAlignment = Alignment.Center
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = AccentGold,
+                    unfocusedBorderColor = DarkSurfaceVariant,
+                    focusedContainerColor = DarkSurfaceVariant,
+                    unfocusedContainerColor = DarkSurfaceVariant,
+                    focusedTextColor = TextPrimary,
+                    unfocusedTextColor = TextPrimary
+                )
+            )
+
+            // Filter Chips Kategori
+            LazyRow(
+                contentPadding = PaddingValues(horizontal = 16.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                modifier = Modifier.fillMaxWidth()
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    Icon(
-                        imageVector = Icons.Filled.Checkroom,
-                        contentDescription = "Kosong",
-                        tint = TextSecondary,
-                        modifier = Modifier.size(64.dp)
-                    )
-                    Spacer(modifier = Modifier.height(16.dp))
-                    Text(
-                        text = if (isSelectMode) "Belum ada barang yang tersedia." else stringResource(R.string.empty_items_title),
-                        fontSize = 18.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = TextPrimary,
-                        textAlign = TextAlign.Center
-                    )
-                    if (!isSelectMode) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                        Text(
-                            text = stringResource(R.string.empty_items_desc),
-                            fontSize = 14.sp,
-                            color = TextSecondary,
-                            textAlign = TextAlign.Center
+                item {
+                    val isSelected = selectedKategori == "Semua"
+                    FilterChip(
+                        selected = isSelected,
+                        onClick = { onKategoriSelected("Semua") },
+                        label = { Text(stringResource(R.string.filter_all)) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = AccentGold,
+                            selectedLabelColor = OnAccentGold,
+                            containerColor = DarkSurfaceVariant,
+                            labelColor = TextSecondary
                         )
-                    }
+                    )
+                }
+
+                items(kategoriList) { kat ->
+                    val isSelected = selectedKategori == kat.nama
+                    FilterChip(
+                        selected = isSelected,
+                        onClick = { onKategoriSelected(kat.nama) },
+                        label = { Text(kat.nama) },
+                        colors = FilterChipDefaults.filterChipColors(
+                            selectedContainerColor = AccentGold,
+                            selectedLabelColor = OnAccentGold,
+                            containerColor = DarkSurfaceVariant,
+                            labelColor = TextSecondary
+                        )
+                    )
                 }
             }
-        } else {
-            LazyVerticalGrid(
-                columns = GridCells.Fixed(2),
-                contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 90.dp),
-                horizontalArrangement = Arrangement.spacedBy(12.dp),
-                verticalArrangement = Arrangement.spacedBy(12.dp),
-                modifier = Modifier.fillMaxSize()
-            ) {
-                items(items, key = { it.id }) { item ->
-                    val isAvailable = item.stokTersedia > 0 && item.status != "perbaikan"
-                    val isSelected = isSelectMode && item.id == selectedItemId
 
-                    ReusableItemCard(
-                        item = item,
-                        fotoRepository = fotoRepository,
-                        isSelectMode = isSelectMode,
-                        isAvailable = isAvailable,
-                        isSelected = isSelected,
-                        onClick = {
-                            if (!isSelectMode || isAvailable) {
-                                onItemClick(item)
-                            }
+            Spacer(modifier = Modifier.height(12.dp))
+
+            if (items.isEmpty()) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(32.dp),
+                    contentAlignment = Alignment.Center
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Icon(
+                            imageVector = Icons.Filled.Checkroom,
+                            contentDescription = "Kosong",
+                            tint = TextSecondary,
+                            modifier = Modifier.size(64.dp)
+                        )
+                        Spacer(modifier = Modifier.height(16.dp))
+                        Text(
+                            text = if (isSelectMode) "Belum ada barang yang tersedia." else stringResource(R.string.empty_items_title),
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = TextPrimary,
+                            textAlign = TextAlign.Center
+                        )
+                        if (!isSelectMode) {
+                            Spacer(modifier = Modifier.height(8.dp))
+                            Text(
+                                text = stringResource(R.string.empty_items_desc),
+                                fontSize = 14.sp,
+                                color = TextSecondary,
+                                textAlign = TextAlign.Center
+                            )
                         }
-                    )
+                    }
+                }
+            } else {
+                // Grid Adaptif: 2 kolom di HP (minSize = 160dp), 3-5 kolom di Tablet/Layar Lebar
+                LazyVerticalGrid(
+                    columns = GridCells.Adaptive(minSize = 160.dp),
+                    contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 90.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(items, key = { it.id }) { item ->
+                        val isAvailable = item.stokTersedia > 0 && item.status != "perbaikan"
+                        val isSelected = isSelectMode && item.id == selectedItemId
+
+                        ReusableItemCard(
+                            item = item,
+                            fotoRepository = fotoRepository,
+                            isSelectMode = isSelectMode,
+                            isAvailable = isAvailable,
+                            isSelected = isSelected,
+                            onClick = {
+                                if (!isSelectMode || isAvailable) {
+                                    onItemClick(item)
+                                }
+                            }
+                        )
+                    }
                 }
             }
         }

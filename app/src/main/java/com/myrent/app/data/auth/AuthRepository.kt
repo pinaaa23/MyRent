@@ -40,7 +40,6 @@ class AuthRepository(
             var namaToko = snapshot.getString("namaToko") ?: ""
             val migrasiFlag = snapshot.getBoolean("migrasiNamaToko") ?: false
 
-            // Migrasi 1x Aman untuk kusumarefina@gmail.com jika namaToko kosong
             if (email.equals("kusumarefina@gmail.com", ignoreCase = true) && namaToko.isEmpty() && !migrasiFlag) {
                 namaToko = "Kusuma Rent"
                 docRef.update(
@@ -110,6 +109,14 @@ class AuthRepository(
         val result = auth.signInWithEmailAndPassword(email, password).await()
         val user = result.user ?: throw Exception("User tidak ditemukan")
 
+        // Force-refresh token ID agar token email_verified di Firestore ter-update
+        try {
+            user.reload().await()
+            user.getIdToken(true).await()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+
         val userDoc = firestore.collection("users").document(user.uid).get().await()
         if (!userDoc.exists()) {
             auth.signOut()
@@ -154,6 +161,7 @@ class AuthRepository(
     suspend fun reloadUser(): Result<FirebaseUser> = runCatching {
         val user = currentUser ?: throw Exception("Tidak ada pengguna aktif")
         user.reload().await()
+        user.getIdToken(true).await()
         auth.currentUser ?: user
     }
 

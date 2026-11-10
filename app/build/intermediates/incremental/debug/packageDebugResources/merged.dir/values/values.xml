@@ -156,13 +156,13 @@
     <string name="title_settings">Pengaturan</string>
     <string name="title_verify_email">Cek Email Kamu</string>
     <style name="Theme.App.Starting" parent="Theme.SplashScreen">
-        <item name="windowSplashScreenBackground">#121212</item>
-        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="windowSplashScreenBackground">#171513</item>
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_myrent_logo</item>
         <item name="postSplashScreenTheme">@style/Theme.MyRent</item>
     </style>
     <style name="Theme.MyRent" parent="android:Theme.Material.NoActionBar">
-        <item name="android:statusBarColor">#121212</item>
-        <item name="android:navigationBarColor">#1E1E1E</item>
+        <item name="android:statusBarColor">#171513</item>
+        <item name="android:navigationBarColor">#171513</item>
         <item name="android:windowLightStatusBar">false</item>
         <item name="android:windowLightNavigationBar">false</item>
     </style>

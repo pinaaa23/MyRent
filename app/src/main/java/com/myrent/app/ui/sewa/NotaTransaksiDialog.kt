@@ -283,11 +283,13 @@ fun NotaTransaksiDialog(
 
                     ReceiptDivider()
 
+                    val displayMetode = if (rental.dp == 0L && rental.jumlahPelunasan == 0L) "-" else rental.metodePembayaran.ifEmpty { "-" }
+
                     // Biaya, DP, Sisa, Metode, & Status Lunas
                     ReceiptInfoLine("Total Biaya", ": ${formatRupiah(rental.hargaTotal)}")
                     ReceiptInfoLine("Uang Muka", ": ${formatRupiah(rental.dp)}")
                     ReceiptInfoLine("Sisa Bayar", ": ${formatRupiah(rental.sisaBayar)}")
-                    ReceiptInfoLine("Metode", ": ${rental.metodePembayaran}")
+                    ReceiptInfoLine("Metode", ": $displayMetode")
                     ReceiptInfoLine("Status", ": $statusBayarStr")
 
                     ReceiptDivider()
@@ -437,6 +439,7 @@ fun cetakStrukProfesional(
     try {
         val unitHarga = if (rental.jumlah > 0 && rental.lamaHari > 0) rental.hargaTotal / (rental.jumlah * rental.lamaHari) else rental.hargaTotal
         val statusStr = if (rental.sisaBayar == 0L) "LUNAS" else "BELUM LUNAS"
+        val displayMetode = if (rental.dp == 0L && rental.jumlahPelunasan == 0L) "-" else rental.metodePembayaran.ifEmpty { "-" }
 
         val logoHtml = if (fotoBase64.isNotEmpty()) {
             "<div class='center'><img src='data:image/jpeg;base64,$fotoBase64' style='max-width: 80px; max-height: 80px; filter: grayscale(100%) contrast(200%); margin-bottom: 5px;' /></div>"
@@ -491,7 +494,7 @@ fun cetakStrukProfesional(
                 </div>
                 <div class="flex">
                     <span>Metode</span>
-                    <span>${rental.metodePembayaran}</span>
+                    <span>$displayMetode</span>
                 </div>
                 <div class="flex">
                     <span>Status</span>

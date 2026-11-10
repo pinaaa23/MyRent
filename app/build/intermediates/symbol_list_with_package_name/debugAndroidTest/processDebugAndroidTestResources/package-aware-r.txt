@@ -1,0 +1,3 @@
+com.myrent.app.test
+style WhiteBackgroundDialogTheme
+style WhiteBackgroundTheme

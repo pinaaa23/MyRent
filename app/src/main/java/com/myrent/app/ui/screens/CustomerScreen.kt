@@ -15,8 +15,10 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.grid.GridCells
+import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
+import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -67,7 +69,6 @@ import com.myrent.app.ui.customer.CustomerItemUi
 import com.myrent.app.ui.customer.CustomerUiState
 import com.myrent.app.ui.customer.CustomerViewModel
 import com.myrent.app.ui.theme.AccentGold
-import com.myrent.app.ui.theme.DarkBackground
 import com.myrent.app.ui.theme.DarkSurface
 import com.myrent.app.ui.theme.DarkSurfaceVariant
 import com.myrent.app.ui.theme.GoldBorderColor
@@ -76,7 +77,7 @@ import com.myrent.app.ui.theme.TextPrimary
 import com.myrent.app.ui.theme.TextSecondary
 
 /**
- * Halaman Data Penyewa (Customer)
+ * Halaman Data Penyewa (Customer) - Responsif & Adaptif HP/Tablet
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -94,81 +95,91 @@ fun CustomerScreen(
             modifier = Modifier.fillMaxSize(),
             containerColor = Color.Transparent
         ) { innerPadding ->
-            Column(
+            Box(
                 modifier = Modifier
                     .fillMaxSize()
-                    .padding(innerPadding)
+                    .padding(innerPadding),
+                contentAlignment = Alignment.TopCenter
             ) {
-                Text(
-                    text = stringResource(R.string.nav_customer),
-                    fontSize = 22.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary,
-                    modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp)
-                )
-
-                OutlinedTextField(
-                    value = searchQuery,
-                    onValueChange = { customerViewModel.onSearchQueryChanged(it) },
-                    placeholder = { Text("Cari nama penyewa atau No WA...", color = TextSecondary) },
-                    leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Cari", tint = TextSecondary) },
-                    singleLine = true,
+                Column(
                     modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(horizontal = 16.dp),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedBorderColor = AccentGold,
-                        unfocusedBorderColor = DarkSurfaceVariant,
-                        focusedContainerColor = DarkSurfaceVariant,
-                        unfocusedContainerColor = DarkSurfaceVariant,
-                        focusedTextColor = TextPrimary,
-                        unfocusedTextColor = TextPrimary
+                        .fillMaxSize()
+                        .widthIn(max = 1000.dp)
+                ) {
+                    Text(
+                        text = stringResource(R.string.nav_customer),
+                        fontSize = 22.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary,
+                        modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp)
                     )
-                )
 
-                Spacer(modifier = Modifier.height(16.dp))
-
-                if (customerList.isEmpty()) {
-                    Box(
+                    OutlinedTextField(
+                        value = searchQuery,
+                        onValueChange = { customerViewModel.onSearchQueryChanged(it) },
+                        placeholder = { Text("Cari nama penyewa atau No WA...", color = TextSecondary) },
+                        leadingIcon = { Icon(Icons.Filled.Search, contentDescription = "Cari", tint = TextSecondary) },
+                        singleLine = true,
                         modifier = Modifier
-                            .fillMaxSize()
-                            .padding(32.dp),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                            Icon(
-                                imageVector = Icons.Filled.Person,
-                                contentDescription = "Penyewa Kosong",
-                                tint = TextSecondary,
-                                modifier = Modifier.size(64.dp)
-                            )
-                            Spacer(modifier = Modifier.height(16.dp))
-                            Text(
-                                text = "Belum Ada Data Penyewa",
-                                fontSize = 18.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = TextPrimary
-                            )
-                            Spacer(modifier = Modifier.height(8.dp))
-                            Text(
-                                text = "Belum ada data penyewa. Data akan muncul otomatis setelah ada sewa.",
-                                fontSize = 14.sp,
-                                color = TextSecondary,
-                                textAlign = TextAlign.Center
-                            )
+                            .fillMaxWidth()
+                            .padding(horizontal = 16.dp),
+                        colors = OutlinedTextFieldDefaults.colors(
+                            focusedBorderColor = AccentGold,
+                            unfocusedBorderColor = DarkSurfaceVariant,
+                            focusedContainerColor = DarkSurfaceVariant,
+                            unfocusedContainerColor = DarkSurfaceVariant,
+                            focusedTextColor = TextPrimary,
+                            unfocusedTextColor = TextPrimary
+                        )
+                    )
+
+                    Spacer(modifier = Modifier.height(16.dp))
+
+                    if (customerList.isEmpty()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(32.dp),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                                Icon(
+                                    imageVector = Icons.Filled.Person,
+                                    contentDescription = "Penyewa Kosong",
+                                    tint = TextSecondary,
+                                    modifier = Modifier.size(64.dp)
+                                )
+                                Spacer(modifier = Modifier.height(16.dp))
+                                Text(
+                                    text = "Belum Ada Data Penyewa",
+                                    fontSize = 18.sp,
+                                    fontWeight = FontWeight.Bold,
+                                    color = TextPrimary
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(
+                                    text = "Belum ada data penyewa. Data akan muncul otomatis setelah ada sewa.",
+                                    fontSize = 14.sp,
+                                    color = TextSecondary,
+                                    textAlign = TextAlign.Center
+                                )
+                            }
                         }
-                    }
-                } else {
-                    LazyColumn(
-                        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 80.dp),
-                        verticalArrangement = Arrangement.spacedBy(10.dp),
-                        modifier = Modifier.fillMaxSize()
-                    ) {
-                        items(customerList, key = { it.customer.id }) { itemUi ->
-                            CustomerCard(
-                                itemUi = itemUi,
-                                onClick = { selectedCustomerForDetail = itemUi }
-                            )
+                    } else {
+                        // Grid Adaptif Penyewa (1 kolom di HP, 2-3 kolom di Tablet)
+                        LazyVerticalGrid(
+                            columns = GridCells.Adaptive(minSize = 320.dp),
+                            contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 80.dp),
+                            horizontalArrangement = Arrangement.spacedBy(10.dp),
+                            verticalArrangement = Arrangement.spacedBy(10.dp),
+                            modifier = Modifier.fillMaxSize()
+                        ) {
+                            items(customerList, key = { it.customer.id }) { itemUi ->
+                                CustomerCard(
+                                    itemUi = itemUi,
+                                    onClick = { selectedCustomerForDetail = itemUi }
+                                )
+                            }
                         }
                     }
                 }

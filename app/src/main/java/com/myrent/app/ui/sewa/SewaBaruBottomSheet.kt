@@ -98,7 +98,7 @@ fun SewaBaruBottomSheet(
     val customerList by viewModel.customerList.collectAsState()
 
     val userDoc by viewModel.userDocState.collectAsState()
-    val kasirNama by viewModel.kasirNama.collectAsState()
+    val kasirNama = userDoc.nama.ifEmpty { "Admin MyRent" }
 
     var namaPenyewa by remember { mutableStateOf(rentalToEdit?.namaPenyewa ?: "") }
     var noWa by remember { mutableStateOf(rentalToEdit?.noWa ?: "") }
@@ -180,7 +180,7 @@ fun SewaBaruBottomSheet(
     if (showPaymentScreen) {
         val jmlInt = jumlahText.toIntOrNull() ?: 1
         PembayaranScreen(
-            totalBayar = totalLong,
+            totalBayar = dpLong,
             namaPenyewa = namaPenyewa,
             namaBarang = selectedItem?.nama ?: (rentalToEdit?.namaBarang ?: "Barang Sewa"),
             jumlahUnit = jmlInt,
@@ -646,13 +646,42 @@ fun SewaBaruBottomSheet(
                             viewModel.setErrorMessage("Jumlah disewa ($jmlInt) melebihi stok yang tersedia (${selectedItem.stokTersedia}).")
                             return@Button
                         }
+                        if (dpVal < 0L) {
+                            viewModel.setErrorMessage("Uang muka / DP tidak boleh negatif.")
+                            return@Button
+                        }
                         if (dpVal > totalVal) {
                             viewModel.setErrorMessage("Uang Muka / DP tidak boleh melebihi Total Biaya Sewa.")
+                            return@Button
+                        }
+
+                        // Jika DP = 0 atau kosong: langsung simpan tanpa masuk ke layar metode pembayaran & QRIS
+                        if (dpVal == 0L) {
+                            viewModel.prosesPembayaranDanSimpanSewa(
+                                selectedItem = selectedItem,
+                                namaPenyewa = namaPenyewa,
+                                noWa = noWa,
+                                tanggalMulai = tglMulaiMs,
+                                tanggalKembali = tglKembaliMs,
+                                lamaHari = lamaHari,
+                                jumlah = jmlInt,
+                                hargaTotal = totalVal,
+                                dp = 0L,
+                                metodePembayaran = "-",
+                                catatan = catatan,
+                                onSuccess = { savedRental ->
+                                    createdRentalForNota = savedRental
+                                }
+                            )
                             return@Button
                         }
                     } else {
                         if (namaPenyewa.trim().isEmpty() || noWa.trim().isEmpty()) {
                             viewModel.setErrorMessage("Nama dan Nomor WA penyewa wajib diisi.")
+                            return@Button
+                        }
+                        if (dpVal < 0L) {
+                            viewModel.setErrorMessage("Uang muka / DP tidak boleh negatif.")
                             return@Button
                         }
                         if (dpVal > totalVal) {

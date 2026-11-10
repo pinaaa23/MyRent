@@ -23,13 +23,22 @@ class KategoriRepository(
     private fun getKategoriCollection(uid: String = currentUid) =
         firestore.collection("toko").document(uid.ifEmpty { "global" }).collection("kategori")
 
+    private suspend fun refreshTokenIfNeeded() {
+        val user = auth.currentUser ?: return
+        try {
+            user.reload().await()
+            user.getIdToken(true).await()
+        } catch (e: Exception) {
+            e.printStackTrace()
+        }
+    }
+
     /**
      * Mendapatkan daftar kategori secara realtime via Flow milik akun toko (toko/{uid}/kategori).
-     * Membaca murni dari toko/{uid}/kategori tanpa membuat kategori ganda otomatis saat kosong.
      */
     fun getKategoriFlow(): Flow<List<Kategori>> = callbackFlow {
         val uid = currentUid
-        if (uid.isEmpty() || !isEmailVerified) {
+        if (uid.isEmpty()) {
             trySend(emptyList())
             awaitClose { }
             return@callbackFlow
@@ -53,16 +62,25 @@ class KategoriRepository(
     }
 
     /**
-     * Menambah kategori baru dengan pencegahan nama ganda (tidak membedakan huruf besar/kecil)
+     * Menambah kategori baru dengan pencegahan nama ganda & penyegaran token otomatis jika butuh izin
      */
     suspend fun tambahKategori(nama: String): Result<Unit> = runCatching {
         val uid = currentUid
-        require(uid.isNotEmpty() && isEmailVerified) { "Pengguna belum login atau email belum diverifikasi" }
+        require(uid.isNotEmpty()) { "Pengguna belum login" }
         val trimmed = nama.trim()
         require(trimmed.isNotEmpty()) { "Nama kategori tidak boleh kosong." }
 
+        refreshTokenIfNeeded()
+
         val userKatRef = getKategoriCollection(uid)
-        val existingDocs = userKatRef.get().await()
+
+        val existingDocs = try {
+            userKatRef.get().await()
+        } catch (e: Exception) {
+            refreshTokenIfNeeded()
+            userKatRef.get().await()
+        }
+
         val isDuplicate = existingDocs.documents.any {
             (it.getString("nama") ?: "").equals(trimmed, ignoreCase = true)
         }
@@ -71,7 +89,12 @@ class KategoriRepository(
             error("Kategori \"$trimmed\" sudah ada.")
         }
 
-        userKatRef.add(mapOf("nama" to trimmed)).await()
+        try {
+            userKatRef.add(mapOf("nama" to trimmed)).await()
+        } catch (e: Exception) {
+            refreshTokenIfNeeded()
+            userKatRef.add(mapOf("nama" to trimmed)).await()
+        }
     }
 
     /**
@@ -79,9 +102,11 @@ class KategoriRepository(
      */
     suspend fun editKategori(id: String, namaBaru: String): Result<Unit> = runCatching {
         val uid = currentUid
-        require(uid.isNotEmpty() && isEmailVerified) { "Pengguna belum login atau email belum diverifikasi" }
+        require(uid.isNotEmpty()) { "Pengguna belum login" }
         val trimmed = namaBaru.trim()
         require(trimmed.isNotEmpty()) { "Nama kategori tidak boleh kosong." }
+
+        refreshTokenIfNeeded()
 
         val userKatRef = getKategoriCollection(uid)
         val existingDocs = userKatRef.get().await()
@@ -93,7 +118,12 @@ class KategoriRepository(
             error("Kategori \"$trimmed\" sudah ada.")
         }
 
-        userKatRef.document(id).update("nama", trimmed).await()
+        try {
+            userKatRef.document(id).update("nama", trimmed).await()
+        } catch (e: Exception) {
+            refreshTokenIfNeeded()
+            userKatRef.document(id).update("nama", trimmed).await()
+        }
     }
 
     /**
@@ -101,7 +131,13 @@ class KategoriRepository(
      */
     suspend fun hapusKategori(id: String): Result<Unit> = runCatching {
         val uid = currentUid
-        require(uid.isNotEmpty() && isEmailVerified) { "Pengguna belum login atau email belum diverifikasi" }
-        getKategoriCollection(uid).document(id).delete().await()
+        require(uid.isNotEmpty()) { "Pengguna belum login" }
+
+        try {
+            getKategoriCollection(uid).document(id).delete().await()
+        } catch (e: Exception) {
+            refreshTokenIfNeeded()
+            getKategoriCollection(uid).document(id).delete().await()
+        }
     }
 }

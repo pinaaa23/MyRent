@@ -48,21 +48,23 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.myrent.app.R
+import com.myrent.app.ui.components.AppBackground
 import com.myrent.app.ui.screens.formatRupiah
 import com.myrent.app.ui.theme.AccentGold
-import com.myrent.app.ui.theme.DarkBackground
 import com.myrent.app.ui.theme.DarkSurface
 import com.myrent.app.ui.theme.DarkSurfaceVariant
+import com.myrent.app.ui.theme.GoldBorderColor
+import com.myrent.app.ui.theme.OnAccentGold
 import com.myrent.app.ui.theme.TextPrimary
 import com.myrent.app.ui.theme.TextSecondary
 
 /**
- * Layar Full-Screen Pembayaran (Pilihan Tunai vs Tampilan Full QRIS)
+ * Layar Full-Screen Pembayaran (Pilihan Tunai vs Tampilan Full QRIS dengan Nominal DP / Pelunasan yang Presisi)
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PembayaranScreen(
-    totalBayar: Long,
+    totalBayar: Long, // Nominal yang dibayar sekarang (DP saat sewa baru, Sisa Bayar saat pelunasan)
     namaPenyewa: String,
     namaBarang: String,
     jumlahUnit: Int,
@@ -90,190 +92,193 @@ fun PembayaranScreen(
     }
 
     // 2. Layar Utama Pembayaran
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.title_payment_method), color = TextPrimary, fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali", tint = TextPrimary)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkBackground)
-            )
-        },
-        containerColor = DarkBackground
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(20.dp)
-                .verticalScroll(scrollState),
-            horizontalAlignment = Alignment.CenterHorizontally
-        ) {
-            // Kartu Ringkasan Biaya
-            Card(
-                modifier = Modifier.fillMaxWidth(),
-                shape = RoundedCornerShape(14.dp),
-                colors = CardDefaults.cardColors(containerColor = DarkSurface)
-            ) {
-                Column(
-                    modifier = Modifier.padding(20.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
-                    Text(
-                        text = "Total yang Harus Dibayar",
-                        fontSize = 14.sp,
-                        color = TextSecondary
-                    )
-                    Spacer(modifier = Modifier.height(4.dp))
-                    Text(
-                        text = formatRupiah(totalBayar),
-                        fontSize = 28.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = AccentGold
-                    )
-                    Spacer(modifier = Modifier.height(10.dp))
-                    Text(
-                        text = "$namaBarang ($jumlahUnit unit) • $namaPenyewa",
-                        fontSize = 13.sp,
-                        color = TextPrimary
-                    )
-                }
-            }
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            Text(
-                text = "Pilih Metode Pembayaran",
-                fontSize = 16.sp,
-                fontWeight = FontWeight.Bold,
-                color = TextPrimary,
-                modifier = Modifier.fillMaxWidth()
-            )
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Opsi 1: QRIS
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { selectedMetode = "QRIS" },
-                shape = RoundedCornerShape(12.dp),
-                border = if (selectedMetode == "QRIS") BorderStroke(2.dp, AccentGold) else null,
-                colors = CardDefaults.cardColors(
-                    containerColor = if (selectedMetode == "QRIS") DarkSurfaceVariant else DarkSurface
+    AppBackground {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text(stringResource(R.string.title_payment_method), color = TextPrimary, fontWeight = FontWeight.Bold) },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali", tint = TextPrimary)
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
                 )
+            },
+            containerColor = Color.Transparent
+        ) { innerPadding ->
+            Column(
+                modifier = Modifier
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(20.dp)
+                    .verticalScroll(scrollState),
+                horizontalAlignment = Alignment.CenterHorizontally
             ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
+                // Kartu Ringkasan Biaya Dibayar Sekarang (Nominal DP)
+                Card(
+                    modifier = Modifier.fillMaxWidth(),
+                    shape = RoundedCornerShape(20.dp),
+                    border = BorderStroke(1.dp, GoldBorderColor),
+                    colors = CardDefaults.cardColors(containerColor = DarkSurface)
                 ) {
-                    RadioButton(
-                        selected = selectedMetode == "QRIS",
-                        onClick = { selectedMetode = "QRIS" },
-                        colors = RadioButtonDefaults.colors(selectedColor = AccentGold)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Icon(
-                        imageVector = Icons.Filled.QrCode2,
-                        contentDescription = "QRIS",
-                        tint = AccentGold,
-                        modifier = Modifier.size(32.dp)
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column(modifier = Modifier.weight(1f)) {
+                    Column(
+                        modifier = Modifier.padding(20.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
                         Text(
-                            text = "QRIS",
-                            fontSize = 16.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary
-                        )
-                        Text(
-                            text = "Scan via BCA, GoPay, OVO, Dana, ShopeePay",
-                            fontSize = 12.sp,
+                            text = "Nominal DP yang Harus Dibayar",
+                            fontSize = 14.sp,
                             color = TextSecondary
                         )
-                    }
-                }
-            }
-
-            Spacer(modifier = Modifier.height(12.dp))
-
-            // Opsi 2: Tunai (Cash)
-            Card(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { selectedMetode = "Tunai" },
-                shape = RoundedCornerShape(12.dp),
-                border = if (selectedMetode == "Tunai") androidx.compose.foundation.BorderStroke(2.dp, AccentGold) else null,
-                colors = CardDefaults.cardColors(
-                    containerColor = if (selectedMetode == "Tunai") DarkSurfaceVariant else DarkSurface
-                )
-            ) {
-                Row(
-                    modifier = Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    RadioButton(
-                        selected = selectedMetode == "Tunai",
-                        onClick = { selectedMetode = "Tunai" },
-                        colors = RadioButtonDefaults.colors(selectedColor = AccentGold)
-                    )
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Icon(
-                        imageVector = Icons.Filled.Money,
-                        contentDescription = "Tunai",
-                        tint = AccentGold,
-                        modifier = Modifier.size(32.dp)
-                    )
-                    Spacer(modifier = Modifier.width(16.dp))
-                    Column(modifier = Modifier.weight(1f)) {
+                        Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Tunai (Cash)",
-                            fontSize = 16.sp,
+                            text = formatRupiah(totalBayar),
+                            fontSize = 32.sp,
                             fontWeight = FontWeight.Bold,
+                            color = AccentGold
+                        )
+                        Spacer(modifier = Modifier.height(10.dp))
+                        Text(
+                            text = "$namaBarang ($jumlahUnit unit) • $namaPenyewa",
+                            fontSize = 13.sp,
                             color = TextPrimary
                         )
-                        Text(
-                            text = "Pembayaran tunai langsung di kasir",
-                            fontSize = 12.sp,
-                            color = TextSecondary
-                        )
                     }
                 }
-            }
 
-            Spacer(modifier = Modifier.weight(1f))
-            Spacer(modifier = Modifier.height(24.dp))
+                Spacer(modifier = Modifier.height(24.dp))
 
-            // Tombol Aksi
-            if (selectedMetode == "QRIS") {
-                Button(
-                    onClick = { isQrisFullScreen = true },
+                Text(
+                    text = "Pilih Metode Pembayaran",
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary,
+                    modifier = Modifier.fillMaxWidth()
+                )
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Opsi 1: QRIS
+                Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp),
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = AccentGold, contentColor = DarkBackground)
+                        .clickable { selectedMetode = "QRIS" },
+                    shape = RoundedCornerShape(16.dp),
+                    border = if (selectedMetode == "QRIS") BorderStroke(2.dp, AccentGold) else BorderStroke(1.dp, GoldBorderColor),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (selectedMetode == "QRIS") DarkSurfaceVariant else DarkSurface
+                    )
                 ) {
-                    Icon(imageVector = Icons.Filled.QrCode2, contentDescription = "QRIS", modifier = Modifier.size(20.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Tampilkan Kode QRIS", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = selectedMetode == "QRIS",
+                            onClick = { selectedMetode = "QRIS" },
+                            colors = RadioButtonDefaults.colors(selectedColor = AccentGold)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Icon(
+                            imageVector = Icons.Filled.QrCode2,
+                            contentDescription = "QRIS",
+                            tint = AccentGold,
+                            modifier = Modifier.size(32.dp)
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "QRIS",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                            Text(
+                                text = "Scan via BCA, GoPay, OVO, Dana, ShopeePay",
+                                fontSize = 12.sp,
+                                color = TextSecondary
+                            )
+                        }
+                    }
                 }
-            } else {
-                Button(
-                    onClick = { onKonfirmasiPembayaran("Tunai") },
+
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Opsi 2: Tunai (Cash)
+                Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp),
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = AccentGold, contentColor = DarkBackground)
+                        .clickable { selectedMetode = "Tunai" },
+                    shape = RoundedCornerShape(16.dp),
+                    border = if (selectedMetode == "Tunai") BorderStroke(2.dp, AccentGold) else BorderStroke(1.dp, GoldBorderColor),
+                    colors = CardDefaults.cardColors(
+                        containerColor = if (selectedMetode == "Tunai") DarkSurfaceVariant else DarkSurface
+                    )
                 ) {
-                    Icon(imageVector = Icons.Filled.CheckCircle, contentDescription = "Konfirmasi", modifier = Modifier.size(20.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Konfirmasi Pembayaran Tunai", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Row(
+                        modifier = Modifier.padding(16.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        RadioButton(
+                            selected = selectedMetode == "Tunai",
+                            onClick = { selectedMetode = "Tunai" },
+                            colors = RadioButtonDefaults.colors(selectedColor = AccentGold)
+                        )
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Icon(
+                            imageVector = Icons.Filled.Money,
+                            contentDescription = "Tunai",
+                            tint = AccentGold,
+                            modifier = Modifier.size(32.dp)
+                        )
+                        Spacer(modifier = Modifier.width(16.dp))
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(
+                                text = "Tunai (Cash)",
+                                fontSize = 16.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
+                            )
+                            Text(
+                                text = "Pembayaran tunai langsung di kasir",
+                                fontSize = 12.sp,
+                                color = TextSecondary
+                            )
+                        }
+                    }
+                }
+
+                Spacer(modifier = Modifier.weight(1f))
+                Spacer(modifier = Modifier.height(24.dp))
+
+                // Tombol Aksi
+                if (selectedMetode == "QRIS") {
+                    Button(
+                        onClick = { isQrisFullScreen = true },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = AccentGold, contentColor = OnAccentGold)
+                    ) {
+                        Icon(imageVector = Icons.Filled.QrCode2, contentDescription = "QRIS", tint = OnAccentGold, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Tampilkan Kode QRIS", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = OnAccentGold)
+                    }
+                } else {
+                    Button(
+                        onClick = { onKonfirmasiPembayaran("Tunai") },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = AccentGold, contentColor = OnAccentGold)
+                    ) {
+                        Icon(imageVector = Icons.Filled.CheckCircle, contentDescription = "Konfirmasi", tint = OnAccentGold, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Konfirmasi Pembayaran Tunai", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = OnAccentGold)
+                    }
                 }
             }
         }
@@ -294,117 +299,119 @@ fun FullScreenQrisView(
     onBack: () -> Unit,
     onConfirm: () -> Unit
 ) {
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text("Pembayaran QRIS", color = TextPrimary, fontWeight = FontWeight.Bold) },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali", tint = TextPrimary)
-                    }
-                },
-                colors = TopAppBarDefaults.topAppBarColors(containerColor = DarkBackground)
-            )
-        },
-        containerColor = DarkBackground
-    ) { innerPadding ->
-        Column(
-            modifier = Modifier
-                .fillMaxSize()
-                .padding(innerPadding)
-                .padding(24.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
-            verticalArrangement = Arrangement.SpaceBetween
-        ) {
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = cabangNama.ifEmpty { "MYRENT STORE" }.uppercase(),
-                    fontSize = 18.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = AccentGold
+    AppBackground {
+        Scaffold(
+            topBar = {
+                TopAppBar(
+                    title = { Text("Pembayaran QRIS", color = TextPrimary, fontWeight = FontWeight.Bold) },
+                    navigationIcon = {
+                        IconButton(onClick = onBack) {
+                            Icon(imageVector = Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Kembali", tint = TextPrimary)
+                        }
+                    },
+                    colors = TopAppBarDefaults.topAppBarColors(containerColor = Color.Transparent)
                 )
-                Spacer(modifier = Modifier.height(4.dp))
-                Text(
-                    text = formatRupiah(totalBayar),
-                    fontSize = 32.sp,
-                    fontWeight = FontWeight.Bold,
-                    color = TextPrimary
-                )
-                Text(
-                    text = "$namaBarang ($jumlahUnit unit) • $namaPenyewa",
-                    fontSize = 14.sp,
-                    color = TextSecondary
-                )
-            }
-
-            // Kartu Putih Kode QRIS Penuh Presisi
-            Card(
+            },
+            containerColor = Color.Transparent
+        ) { innerPadding ->
+            Column(
                 modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(vertical = 16.dp),
-                shape = RoundedCornerShape(20.dp),
-                colors = CardDefaults.cardColors(containerColor = Color.White),
-                elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
+                    .fillMaxSize()
+                    .padding(innerPadding)
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
+                verticalArrangement = Arrangement.SpaceBetween
             ) {
-                Column(
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .padding(24.dp),
-                    horizontalAlignment = Alignment.CenterHorizontally
-                ) {
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
                     Text(
-                        text = "QRIS REGIONAL",
+                        text = cabangNama.ifEmpty { "MYRENT STORE" }.uppercase(),
+                        fontSize = 18.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = AccentGold
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    Text(
+                        text = formatRupiah(totalBayar),
+                        fontSize = 32.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    Text(
+                        text = "$namaBarang ($jumlahUnit unit) • $namaPenyewa",
                         fontSize = 14.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Black,
-                        letterSpacing = 2.sp
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Icon(
-                        imageVector = Icons.Filled.QrCode2,
-                        contentDescription = "QR Code Full",
-                        tint = Color.Black,
-                        modifier = Modifier.size(240.dp)
-                    )
-
-                    Spacer(modifier = Modifier.height(16.dp))
-
-                    Text(
-                        text = "NMB: ${cabangNama.ifEmpty { "MYRENT STORE" }}",
-                        fontSize = 13.sp,
-                        fontWeight = FontWeight.Bold,
-                        color = Color.Black
-                    )
-                    Text(
-                        text = "Poin Penjualan Alat Rent & Sewa",
-                        fontSize = 11.sp,
-                        color = Color.DarkGray
+                        color = TextSecondary
                     )
                 }
-            }
 
-            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                Text(
-                    text = "Silakan tunjukkan kode QRIS di atas kepada konsumen untuk dipindai.",
-                    fontSize = 13.sp,
-                    color = TextSecondary,
-                    textAlign = TextAlign.Center,
-                    modifier = Modifier.padding(bottom = 16.dp)
-                )
-
-                Button(
-                    onClick = onConfirm,
+                // Kartu Putih Kode QRIS Penuh Presisi
+                Card(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(52.dp),
-                    shape = RoundedCornerShape(10.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = AccentGold, contentColor = DarkBackground)
+                        .padding(vertical = 16.dp),
+                    shape = RoundedCornerShape(20.dp),
+                    colors = CardDefaults.cardColors(containerColor = Color.White),
+                    elevation = CardDefaults.cardElevation(defaultElevation = 8.dp)
                 ) {
-                    Icon(imageVector = Icons.Filled.CheckCircle, contentDescription = "Konfirmasi", modifier = Modifier.size(20.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text("Konfirmasi Pembayaran Selesai", fontSize = 16.sp, fontWeight = FontWeight.Bold)
+                    Column(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(24.dp),
+                        horizontalAlignment = Alignment.CenterHorizontally
+                    ) {
+                        Text(
+                            text = "QRIS REGIONAL",
+                            fontSize = 14.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black,
+                            letterSpacing = 2.sp
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Icon(
+                            imageVector = Icons.Filled.QrCode2,
+                            contentDescription = "QR Code Full",
+                            tint = Color.Black,
+                            modifier = Modifier.size(240.dp)
+                        )
+
+                        Spacer(modifier = Modifier.height(16.dp))
+
+                        Text(
+                            text = "NMB: ${cabangNama.ifEmpty { "MYRENT STORE" }}",
+                            fontSize = 13.sp,
+                            fontWeight = FontWeight.Bold,
+                            color = Color.Black
+                        )
+                        Text(
+                            text = "Poin Penjualan Alat Rent & Sewa",
+                            fontSize = 11.sp,
+                            color = Color.DarkGray
+                        )
+                    }
+                }
+
+                Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                    Text(
+                        text = "Silakan tunjukkan kode QRIS di atas kepada konsumen untuk dipindai.",
+                        fontSize = 13.sp,
+                        color = TextSecondary,
+                        textAlign = TextAlign.Center,
+                        modifier = Modifier.padding(bottom = 16.dp)
+                    )
+
+                    Button(
+                        onClick = onConfirm,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(52.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = AccentGold, contentColor = OnAccentGold)
+                    ) {
+                        Icon(imageVector = Icons.Filled.CheckCircle, contentDescription = "Konfirmasi", tint = OnAccentGold, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Konfirmasi Pembayaran Selesai", fontSize = 16.sp, fontWeight = FontWeight.Bold, color = OnAccentGold)
+                    }
                 }
             }
         }

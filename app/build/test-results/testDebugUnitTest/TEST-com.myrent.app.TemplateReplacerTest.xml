@@ -1,10 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.myrent.app.TemplateReplacerTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-10T12:33:41" hostname="REFINAKUSUMA" time="0.014">
+<testsuite name="com.myrent.app.TemplateReplacerTest" tests="5" skipped="0" failures="0" errors="0" timestamp="2026-11-10T17:17:10" hostname="REFINAKUSUMA" time="0.01">
   <properties/>
-  <testcase name="testTemplateVariableReplacement" classname="com.myrent.app.TemplateReplacerTest" time="0.012"/>
-  <testcase name="testUnknownVariablesKeptAsIs" classname="com.myrent.app.TemplateReplacerTest" time="0.0"/>
+  <testcase name="testTemplateVariableReplacement" classname="com.myrent.app.TemplateReplacerTest" time="0.007"/>
+  <testcase name="testUnknownVariablesKeptAsIs" classname="com.myrent.app.TemplateReplacerTest" time="0.001"/>
   <testcase name="testIsValidNoWa" classname="com.myrent.app.TemplateReplacerTest" time="0.001"/>
-  <testcase name="testNormalizeNoWa" classname="com.myrent.app.TemplateReplacerTest" time="0.0"/>
+  <testcase name="testNormalizeNoWa" classname="com.myrent.app.TemplateReplacerTest" time="0.001"/>
   <testcase name="testEmptyTemplateHandledGracefully" classname="com.myrent.app.TemplateReplacerTest" time="0.0"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>

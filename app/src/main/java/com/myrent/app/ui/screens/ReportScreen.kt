@@ -67,7 +67,7 @@ import com.myrent.app.ui.theme.TextPrimary
 import com.myrent.app.ui.theme.TextSecondary
 
 /**
- * Layar Laporan Omzet, Statistik Sewa, Grafik Batang, & Kategori (Tanpa Filter Cabang)
+ * Layar Laporan Omzet, Statistik Sewa, Grafik Batang, & Kategori dengan Filter Metode (Tunai / Non-Tunai)
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -142,6 +142,7 @@ fun ReportScreen(
                     modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp)
                 )
 
+                // Filter Periode (Hari, Minggu, Bulan, Tahun)
                 LazyRow(
                     contentPadding = PaddingValues(horizontal = 16.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -160,6 +161,36 @@ fun ReportScreen(
                             selected = isSelected,
                             onClick = { reportViewModel.selectPeriodType(pType) },
                             label = { Text(pLabel) },
+                            colors = FilterChipDefaults.filterChipColors(
+                                selectedContainerColor = AccentGold,
+                                selectedLabelColor = OnAccentGold,
+                                containerColor = DarkSurfaceVariant,
+                                labelColor = TextSecondary
+                            )
+                        )
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(8.dp))
+
+                // Filter Metode Pembayaran (Semua, Tunai, Non-Tunai)
+                LazyRow(
+                    contentPadding = PaddingValues(horizontal = 16.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    val methodOptions = listOf(
+                        "Semua" to "Semua Metode",
+                        "TUNAI" to "Tunai",
+                        "NON_TUNAI" to "Non-Tunai"
+                    )
+
+                    items(methodOptions) { (mValue, mLabel) ->
+                        val isSelected = uiState.selectedMethodFilter == mValue
+                        FilterChip(
+                            selected = isSelected,
+                            onClick = { reportViewModel.selectMethodFilter(mValue) },
+                            label = { Text(mLabel) },
                             colors = FilterChipDefaults.filterChipColors(
                                 selectedContainerColor = AccentGold,
                                 selectedLabelColor = OnAccentGold,
@@ -251,7 +282,7 @@ fun ReportScreen(
                         )
                         Spacer(modifier = Modifier.height(4.dp))
                         Text(
-                            text = "Total biaya sewa pada periode ini",
+                            text = "Total biaya sewa transaksi pada periode ini",
                             fontSize = 12.sp,
                             color = TextSecondary
                         )
@@ -283,6 +314,44 @@ fun ReportScreen(
                                 modifier = Modifier.weight(1.2f)
                             )
                         }
+
+                        Spacer(modifier = Modifier.height(12.dp))
+
+                        // Rincian Kecil Tunai vs Non-Tunai Diterima
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .clip(RoundedCornerShape(8.dp))
+                                .background(DarkSurfaceVariant)
+                                .padding(horizontal = 12.dp, vertical = 8.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically
+                        ) {
+                            Text(
+                                text = "Tunai: ${formatDate(uiState.sudahDiterimaTunai)}",
+                                fontSize = 11.sp,
+                                color = TextSecondary
+                            )
+                            Text(
+                                text = "Non-Tunai: ${formatRupiah(uiState.sudahDiterimaNonTunai)}",
+                                fontSize = 11.sp,
+                                color = TextSecondary
+                            )
+                            Text(
+                                text = "Total: ${formatRupiah(uiState.sudahDiterimaTunai + uiState.sudahDiterimaNonTunai)}",
+                                fontSize = 11.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = AccentGold
+                            )
+                        }
+
+                        Spacer(modifier = Modifier.height(4.dp))
+                        Text(
+                            text = "*Keterangan: Belum dibayar tidak dipengaruhi filter metode karena belum ada pembayaran.",
+                            fontSize = 10.sp,
+                            color = TextSecondary,
+                            textAlign = TextAlign.Center
+                        )
                     }
                 }
 

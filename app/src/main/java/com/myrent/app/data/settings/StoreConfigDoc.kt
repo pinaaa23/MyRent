@@ -1,5 +1,7 @@
 package com.myrent.app.data.settings
 
+import com.myrent.app.ui.screens.formatRupiah
+
 /**
  * Model data konfigurasi kustom nota & template pesan WA toko
  * Disimpan di Firestore "toko/{uid}/settings/config"
@@ -27,7 +29,7 @@ object TemplateReplacer {
         "nama_toko", "toko",
         "telp_toko", "telp",
         "alamat_toko", "alamat",
-        "total", "dp", "sisa", "invoice", "nota", "catatan"
+        "total", "dp", "pelunasan", "sisa", "invoice", "nota", "catatan"
     )
 
     fun replaceVariables(
@@ -44,13 +46,22 @@ object TemplateReplacer {
         telat: String = "0",
         tanggalSewa: String = "",
         telpToko: String = "",
-        alamatToko: String = ""
+        alamatToko: String = "",
+        jumlahPelunasan: Long = 0L,
+        pelunasanMetode: String = "",
+        pelunasanTanggalStr: String = ""
     ): String {
         if (template.isEmpty()) return ""
 
         val namaVal = nama
         val tglKembaliVal = tanggal
         val tglSewaVal = tanggalSewa.ifEmpty { tglKembaliVal }
+
+        val pelunasanLine = if (jumlahPelunasan > 0L) {
+            val met = pelunasanMetode.ifEmpty { "Tidak diketahui" }.lowercase()
+            val tglStr = if (pelunasanTanggalStr.isNotEmpty()) " ($pelunasanTanggalStr)" else ""
+            "Pelunasan ($met)$tglStr: ${formatRupiah(jumlahPelunasan)}"
+        } else ""
 
         var result = template
             .replace("{nama_penyewa}", namaVal)
@@ -69,10 +80,18 @@ object TemplateReplacer {
             .replace("{alamat}", alamatToko)
             .replace("{total}", total)
             .replace("{dp}", dp)
+            .replace("{pelunasan}", pelunasanLine)
             .replace("{sisa}", sisa)
             .replace("{invoice}", invoice)
             .replace("{nota}", invoice)
             .replace("{catatan}", catatan.ifEmpty { "-" })
+
+        if (pelunasanLine.isEmpty()) {
+            result = result.replace("• Pelunasan   : {pelunasan}\n", "")
+                .replace("Pelunasan   : {pelunasan}\n", "")
+                .replace("• {pelunasan}\n", "")
+                .replace("{pelunasan}\n", "")
+        }
 
         if (telpToko.isBlank()) {
             result = result.replace("Telp/WA: \n", "").replace("Telp/WA: ", "").replace("WA: ", "")
@@ -118,6 +137,7 @@ object DefaultStoreConfig {
         • Periode     : {tanggal_kembali}
         • Total Biaya : {total}
         • Uang Muka   : {dp}
+        • {pelunasan}
         • Sisa Bayar  : {sisa}
         • Jaminan/Note: {catatan}
 

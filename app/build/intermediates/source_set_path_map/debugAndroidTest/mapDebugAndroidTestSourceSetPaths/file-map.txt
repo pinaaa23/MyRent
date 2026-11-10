@@ -1,0 +1,6 @@
+com.myrent.app.test.app-tracing-1.2.0-0 C:\Users\LENOVO\.gradle\caches\8.12\transforms\2b22fc47178827d8bd51b7a262839286\transformed\tracing-1.2.0\res
+com.myrent.app.test.app-core-1.6.1-1 C:\Users\LENOVO\.gradle\caches\8.12\transforms\b83f4d88e01877f1ea2cad762ad20919\transformed\core-1.6.1\res
+com.myrent.app.test.app-androidTest-2 D:\PROJECT\MyRent\app\build\generated\res\resValues\androidTest\debug
+com.myrent.app.test.app-mergeDebugAndroidTestResources-3 D:\PROJECT\MyRent\app\build\intermediates\incremental\debugAndroidTest\mergeDebugAndroidTestResources\merged.dir
+com.myrent.app.test.app-mergeDebugAndroidTestResources-4 D:\PROJECT\MyRent\app\build\intermediates\incremental\debugAndroidTest\mergeDebugAndroidTestResources\stripped.dir
+com.myrent.app.test.app-debugAndroidTest-5 D:\PROJECT\MyRent\app\build\intermediates\merged_res\debugAndroidTest\mergeDebugAndroidTestResources

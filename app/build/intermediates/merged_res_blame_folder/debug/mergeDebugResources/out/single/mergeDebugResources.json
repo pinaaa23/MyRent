@@ -1,18 +1,82 @@
 [
     {
-        "merged": "com.myrent.app-debug-76:/mipmap-anydpi-v26_ic_launcher_round.xml.flat",
-        "source": "com.myrent.app-main-78:/mipmap-anydpi-v26/ic_launcher_round.xml"
+        "merged": "com.myrent.app-debug-76:/drawable-xxhdpi_ic_launcher_foreground.png.flat",
+        "source": "com.myrent.app-main-78:/drawable-xxhdpi/ic_launcher_foreground.png"
     },
     {
-        "merged": "com.myrent.app-debug-76:/xml_file_paths.xml.flat",
-        "source": "com.myrent.app-main-78:/xml/file_paths.xml"
+        "merged": "C:\\Users\\LENOVO\\.gradle\\daemon\\8.12\\com.myrent.app-debug-76:\\mipmap-anydpi-v26_ic_launcher.xml.flat",
+        "source": "C:\\Users\\LENOVO\\.gradle\\daemon\\8.12\\com.myrent.app-main-78:\\mipmap-anydpi-v26\\ic_launcher.xml"
     },
     {
-        "merged": "com.myrent.app-debug-76:/mipmap-anydpi-v26_ic_launcher.xml.flat",
-        "source": "com.myrent.app-main-78:/mipmap-anydpi-v26/ic_launcher.xml"
+        "merged": "com.myrent.app-debug-76:/mipmap-xhdpi_ic_launcher_round.png.flat",
+        "source": "com.myrent.app-main-78:/mipmap-xhdpi/ic_launcher_round.png"
     },
     {
-        "merged": "com.myrent.app-debug-76:/drawable_ic_launcher_foreground.xml.flat",
-        "source": "com.myrent.app-main-78:/drawable/ic_launcher_foreground.xml"
+        "merged": "com.myrent.app-debug-76:/mipmap-mdpi_ic_launcher_round.png.flat",
+        "source": "com.myrent.app-main-78:/mipmap-mdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "com.myrent.app-debug-76:/mipmap-xxxhdpi_ic_launcher_round.png.flat",
+        "source": "com.myrent.app-main-78:/mipmap-xxxhdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "C:\\Users\\LENOVO\\.gradle\\daemon\\8.12\\com.myrent.app-debug-76:\\drawable_ic_launcher_foreground.xml.flat",
+        "source": "C:\\Users\\LENOVO\\.gradle\\daemon\\8.12\\com.myrent.app-main-78:\\drawable\\ic_launcher_foreground.xml"
+    },
+    {
+        "merged": "com.myrent.app-debug-76:/mipmap-xxxhdpi_ic_launcher.png.flat",
+        "source": "com.myrent.app-main-78:/mipmap-xxxhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.myrent.app-debug-76:/drawable_ic_myrent_logo.png.flat",
+        "source": "com.myrent.app-main-78:/drawable/ic_myrent_logo.png"
+    },
+    {
+        "merged": "com.myrent.app-debug-76:/drawable-mdpi_ic_launcher_foreground.png.flat",
+        "source": "com.myrent.app-main-78:/drawable-mdpi/ic_launcher_foreground.png"
+    },
+    {
+        "merged": "C:\\Users\\LENOVO\\.gradle\\daemon\\8.12\\com.myrent.app-debug-76:\\xml_file_paths.xml.flat",
+        "source": "C:\\Users\\LENOVO\\.gradle\\daemon\\8.12\\com.myrent.app-main-78:\\xml\\file_paths.xml"
+    },
+    {
+        "merged": "com.myrent.app-debug-76:/drawable-xhdpi_ic_launcher_foreground.png.flat",
+        "source": "com.myrent.app-main-78:/drawable-xhdpi/ic_launcher_foreground.png"
+    },
+    {
+        "merged": "com.myrent.app-debug-76:/mipmap-xhdpi_ic_launcher.png.flat",
+        "source": "com.myrent.app-main-78:/mipmap-xhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "C:\\Users\\LENOVO\\.gradle\\daemon\\8.12\\com.myrent.app-debug-76:\\mipmap-anydpi-v26_ic_launcher_round.xml.flat",
+        "source": "C:\\Users\\LENOVO\\.gradle\\daemon\\8.12\\com.myrent.app-main-78:\\mipmap-anydpi-v26\\ic_launcher_round.xml"
+    },
+    {
+        "merged": "com.myrent.app-debug-76:/mipmap-hdpi_ic_launcher_round.png.flat",
+        "source": "com.myrent.app-main-78:/mipmap-hdpi/ic_launcher_round.png"
+    },
+    {
+        "merged": "com.myrent.app-debug-76:/drawable-hdpi_ic_launcher_foreground.png.flat",
+        "source": "com.myrent.app-main-78:/drawable-hdpi/ic_launcher_foreground.png"
+    },
+    {
+        "merged": "com.myrent.app-debug-76:/mipmap-xxhdpi_ic_launcher.png.flat",
+        "source": "com.myrent.app-main-78:/mipmap-xxhdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.myrent.app-debug-76:/drawable-xxxhdpi_ic_launcher_foreground.png.flat",
+        "source": "com.myrent.app-main-78:/drawable-xxxhdpi/ic_launcher_foreground.png"
+    },
+    {
+        "merged": "com.myrent.app-debug-76:/mipmap-mdpi_ic_launcher.png.flat",
+        "source": "com.myrent.app-main-78:/mipmap-mdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.myrent.app-debug-76:/mipmap-hdpi_ic_launcher.png.flat",
+        "source": "com.myrent.app-main-78:/mipmap-hdpi/ic_launcher.png"
+    },
+    {
+        "merged": "com.myrent.app-debug-76:/mipmap-xxhdpi_ic_launcher_round.png.flat",
+        "source": "com.myrent.app-main-78:/mipmap-xxhdpi/ic_launcher_round.png"
     }
 ]

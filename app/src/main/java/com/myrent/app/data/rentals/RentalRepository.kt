@@ -44,35 +44,56 @@ class RentalRepository(
                 trySend(emptyList())
                 return@addSnapshotListener
             }
-            val list = snapshot?.documents?.map { doc ->
-                Rental(
-                    id = doc.id,
-                    cabangId = doc.getString("cabangId") ?: "",
-                    itemId = doc.getString("itemId") ?: "",
-                    namaBarang = doc.getString("namaBarang") ?: "",
-                    customerId = doc.getString("customerId") ?: "",
-                    namaPenyewa = doc.getString("namaPenyewa") ?: "",
-                    noWa = doc.getString("noWa") ?: "",
-                    tanggalMulai = doc.getLong("tanggalMulai") ?: System.currentTimeMillis(),
-                    tanggalKembali = doc.getLong("tanggalKembali") ?: System.currentTimeMillis(),
-                    lamaHari = (doc.getLong("lamaHari") ?: 1L).toInt(),
-                    jumlah = (doc.getLong("jumlah") ?: 1L).toInt(),
-                    hargaTotal = doc.getLong("hargaTotal") ?: 0L,
-                    dp = doc.getLong("dp") ?: 0L,
-                    sisaBayar = doc.getLong("sisaBayar") ?: 0L,
-                    statusPembayaran = doc.getString("statusPembayaran") ?: "lunas",
-                    status = doc.getString("status") ?: "berjalan",
-                    sudahFollowUpH1 = doc.getBoolean("sudahFollowUpH1") ?: false,
-                    sudahFollowUpH = doc.getBoolean("sudahFollowUpH") ?: false,
-                    dibuatOleh = doc.getString("dibuatOleh") ?: "",
-                    dibuatPada = doc.getLong("dibuatPada") ?: System.currentTimeMillis(),
-                    dikembalikanPada = doc.getLong("dikembalikanPada"),
-                    catatan = doc.getString("catatan") ?: "",
-                    invoiceId = doc.getString("invoiceId") ?: "",
-                    metodePembayaran = doc.getString("metodePembayaran") ?: "Tunai",
-                    pelunasanPada = doc.getLong("pelunasanPada"),
-                    jumlahPelunasan = doc.getLong("jumlahPelunasan") ?: 0L
-                )
+            val list = snapshot?.documents?.mapNotNull { doc ->
+                try {
+                    @Suppress("UNCHECKED_CAST")
+                    val rawPayments = doc.get("payments") as? List<Map<String, Any>>
+                    val paymentsList = rawPayments?.mapNotNull { pMap ->
+                        val metRaw = pMap["metode"] as? String ?: ""
+                        val metStr = metRaw.ifEmpty { "Tidak diketahui" }
+                        PaymentRecord(
+                            id = pMap["id"] as? String ?: "",
+                            rentalId = pMap["rentalId"] as? String ?: doc.id,
+                            jumlah = (pMap["jumlah"] as? Number)?.toLong() ?: 0L,
+                            jenis = pMap["jenis"] as? String ?: "DP",
+                            metode = metStr,
+                            jenisMetode = pMap["jenisMetode"] as? String ?: mapJenisMetode(metRaw),
+                            tanggal = (pMap["tanggal"] as? Number)?.toLong() ?: System.currentTimeMillis()
+                        )
+                    } ?: emptyList()
+
+                    Rental(
+                        id = doc.id,
+                        cabangId = doc.getString("cabangId") ?: "",
+                        itemId = doc.getString("itemId") ?: "",
+                        namaBarang = doc.getString("namaBarang") ?: "",
+                        customerId = doc.getString("customerId") ?: "",
+                        namaPenyewa = doc.getString("namaPenyewa") ?: "",
+                        noWa = doc.getString("noWa") ?: "",
+                        tanggalMulai = doc.getLong("tanggalMulai") ?: System.currentTimeMillis(),
+                        tanggalKembali = doc.getLong("tanggalKembali") ?: System.currentTimeMillis(),
+                        lamaHari = (doc.getLong("lamaHari") ?: 1L).toInt(),
+                        jumlah = (doc.getLong("jumlah") ?: 1L).toInt(),
+                        hargaTotal = doc.getLong("hargaTotal") ?: 0L,
+                        dp = doc.getLong("dp") ?: 0L,
+                        sisaBayar = doc.getLong("sisaBayar") ?: 0L,
+                        statusPembayaran = doc.getString("statusPembayaran") ?: "lunas",
+                        status = doc.getString("status") ?: "berjalan",
+                        sudahFollowUpH1 = doc.getBoolean("sudahFollowUpH1") ?: false,
+                        sudahFollowUpH = doc.getBoolean("sudahFollowUpH") ?: false,
+                        dibuatOleh = doc.getString("dibuatOleh") ?: "",
+                        dibuatPada = doc.getLong("dibuatPada") ?: System.currentTimeMillis(),
+                        dikembalikanPada = doc.getLong("dikembalikanPada"),
+                        catatan = doc.getString("catatan") ?: "",
+                        invoiceId = doc.getString("invoiceId") ?: "",
+                        metodePembayaran = doc.getString("metodePembayaran") ?: "",
+                        pelunasanPada = doc.getLong("pelunasanPada"),
+                        jumlahPelunasan = doc.getLong("jumlahPelunasan") ?: 0L,
+                        payments = paymentsList
+                    )
+                } catch (e: Exception) {
+                    null
+                }
             }?.sortedByDescending { it.dibuatPada } ?: emptyList()
 
             trySend(list)
@@ -90,6 +111,34 @@ class RentalRepository(
             noWaRaw = rental.noWa
         )
         val customerId = customerRes.getOrNull()?.id ?: noWaNorm
+
+        val initialPayments = mutableListOf<PaymentRecord>()
+        if (rental.dp > 0L) {
+            val met = rental.metodePembayaran.ifEmpty { "Tidak diketahui" }
+            initialPayments.add(
+                PaymentRecord(
+                    id = "pay_dp_${System.currentTimeMillis()}",
+                    rentalId = "",
+                    jumlah = rental.dp,
+                    jenis = "DP",
+                    metode = met,
+                    jenisMetode = mapJenisMetode(rental.metodePembayaran),
+                    tanggal = rental.dibuatPada
+                )
+            )
+        }
+
+        val paymentsMapList = initialPayments.map {
+            mapOf(
+                "id" to it.id,
+                "rentalId" to it.rentalId,
+                "jumlah" to it.jumlah,
+                "jenis" to it.jenis,
+                "metode" to it.metode,
+                "jenisMetode" to it.jenisMetode,
+                "tanggal" to it.tanggal
+            )
+        }
 
         val map = mapOf(
             "cabangId" to rental.cabangId,
@@ -115,7 +164,8 @@ class RentalRepository(
             "invoiceId" to rental.invoiceId,
             "metodePembayaran" to rental.metodePembayaran,
             "pelunasanPada" to rental.pelunasanPada,
-            "jumlahPelunasan" to rental.jumlahPelunasan
+            "jumlahPelunasan" to rental.jumlahPelunasan,
+            "payments" to paymentsMapList
         )
 
         val docRef = getRentalsCollection(uid).add(map).await()
@@ -135,7 +185,78 @@ class RentalRepository(
             ).await()
         }
 
-        rental.copy(id = docRef.id, customerId = customerId, noWa = noWaNorm)
+        rental.copy(
+            id = docRef.id,
+            customerId = customerId,
+            noWa = noWaNorm,
+            payments = initialPayments.map { it.copy(rentalId = docRef.id) }
+        )
+    }
+
+    suspend fun updateSewa(rental: Rental): Result<Unit> = runCatching {
+        val uid = currentUid
+        require(uid.isNotEmpty() && isEmailVerified) { "Pengguna belum login atau email belum diverifikasi" }
+
+        val noWaNorm = normalizeNoWa(rental.noWa)
+        if (rental.namaPenyewa.isNotEmpty()) {
+            customerRepository.upsertCustomer(rental.namaPenyewa, rental.noWa)
+        }
+
+        // Perbarui catatan DP jika DP berubah pada mode edit sewa
+        val currentPayments = rental.getAllPaymentRecords().toMutableList()
+        val dpIndex = currentPayments.indexOfFirst { it.jenis == "DP" }
+        if (dpIndex >= 0) {
+            if (rental.dp > 0L) {
+                currentPayments[dpIndex] = currentPayments[dpIndex].copy(jumlah = rental.dp)
+            } else {
+                currentPayments.removeAt(dpIndex)
+            }
+        } else if (rental.dp > 0L) {
+            currentPayments.add(
+                0,
+                PaymentRecord(
+                    id = "pay_dp_${System.currentTimeMillis()}",
+                    rentalId = rental.id,
+                    jumlah = rental.dp,
+                    jenis = "DP",
+                    metode = rental.metodePembayaran.ifEmpty { "Tidak diketahui" },
+                    jenisMetode = mapJenisMetode(rental.metodePembayaran),
+                    tanggal = rental.dibuatPada
+                )
+            )
+        }
+
+        val paymentsMapList = currentPayments.map {
+            mapOf(
+                "id" to it.id,
+                "rentalId" to rental.id,
+                "jumlah" to it.jumlah,
+                "jenis" to it.jenis,
+                "metode" to it.metode,
+                "jenisMetode" to it.jenisMetode,
+                "tanggal" to it.tanggal
+            )
+        }
+
+        val map = mapOf(
+            "namaPenyewa" to rental.namaPenyewa.trim(),
+            "noWa" to noWaNorm,
+            "tanggalMulai" to rental.tanggalMulai,
+            "tanggalKembali" to rental.tanggalKembali,
+            "lamaHari" to rental.lamaHari,
+            "jumlah" to rental.jumlah,
+            "hargaTotal" to rental.hargaTotal,
+            "dp" to rental.dp,
+            "sisaBayar" to rental.sisaBayar,
+            "statusPembayaran" to rental.statusPembayaran,
+            "catatan" to rental.catatan,
+            "invoiceId" to rental.invoiceId,
+            "metodePembayaran" to rental.metodePembayaran,
+            "pelunasanPada" to rental.pelunasanPada,
+            "jumlahPelunasan" to rental.jumlahPelunasan,
+            "payments" to paymentsMapList
+        )
+        getRentalsCollection(uid).document(rental.id).update(map).await()
     }
 
     suspend fun tandaiDikembalikan(rental: Rental): Result<Unit> = runCatching {
@@ -166,34 +287,6 @@ class RentalRepository(
                 ).await()
             }
         }
-    }
-
-    suspend fun updateSewa(rental: Rental): Result<Unit> = runCatching {
-        val uid = currentUid
-        require(uid.isNotEmpty() && isEmailVerified) { "Pengguna belum login atau email belum diverifikasi" }
-
-        val noWaNorm = normalizeNoWa(rental.noWa)
-        if (rental.namaPenyewa.isNotEmpty()) {
-            customerRepository.upsertCustomer(rental.namaPenyewa, rental.noWa)
-        }
-
-        val map = mapOf(
-            "namaPenyewa" to rental.namaPenyewa.trim(),
-            "noWa" to noWaNorm,
-            "tanggalMulai" to rental.tanggalMulai,
-            "tanggalKembali" to rental.tanggalKembali,
-            "lamaHari" to rental.lamaHari,
-            "jumlah" to rental.jumlah,
-            "hargaTotal" to rental.hargaTotal,
-            "dp" to rental.dp,
-            "sisaBayar" to rental.sisaBayar,
-            "statusPembayaran" to rental.statusPembayaran,
-            "catatan" to rental.catatan,
-            "metodePembayaran" to rental.metodePembayaran,
-            "pelunasanPada" to rental.pelunasanPada,
-            "jumlahPelunasan" to rental.jumlahPelunasan
-        )
-        getRentalsCollection(uid).document(rental.id).update(map).await()
     }
 
     suspend fun hapusSewa(rental: Rental): Result<Unit> = runCatching {

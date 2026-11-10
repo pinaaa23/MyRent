@@ -141,7 +141,12 @@ class SettingsViewModel(
                 _uiState.value = SettingsUiState.Idle
                 onSuccess()
             }.onFailure { e ->
-                _uiState.value = SettingsUiState.Error(e.message ?: "Gagal menambah kategori, periksa koneksi internet.")
+                val errorMsg = if (e.message?.contains("PERMISSION_DENIED", ignoreCase = true) == true) {
+                    "Gagal menambah kategori. Silakan periksa koneksi internet atau login ulang."
+                } else {
+                    e.message ?: "Gagal menambah kategori, periksa koneksi internet."
+                }
+                _uiState.value = SettingsUiState.Error(errorMsg)
             }
         }
     }

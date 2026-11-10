@@ -72,7 +72,7 @@ fun DetailSewaBottomSheet(
 ) {
     val context = LocalContext.current
     val userDoc by viewModel.userDocState.collectAsState()
-    val kasirNama by viewModel.kasirNama.collectAsState()
+    val kasirNama = userDoc.nama.ifEmpty { "Admin MyRent" }
 
     var showReturnConfirmDialog by remember { mutableStateOf(false) }
     var showDeleteConfirmDialog by remember { mutableStateOf(false) }
