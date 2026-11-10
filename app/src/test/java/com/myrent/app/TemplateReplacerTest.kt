@@ -21,7 +21,8 @@ class TemplateReplacerTest {
             template = template,
             nama = "Fauzan",
             barang = "Kamera Canon EOS 80D (1 unit)",
-            tanggal = "10 Nov 2026"
+            tanggal = "10 Nov 2026",
+            toko = "MyRent"
         )
 
         assertEquals("Halo Fauzan, kami dari toko MyRent mengingatkan bahwa Kamera Canon EOS 80D (1 unit) dijadwalkan dikembalikan besok, 10 Nov 2026. Terima kasih.", result)

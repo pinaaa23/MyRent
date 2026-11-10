@@ -7,8 +7,12 @@ import com.myrent.app.data.auth.AuthRepository
 import com.myrent.app.data.auth.UserDoc
 import com.myrent.app.data.kategori.Kategori
 import com.myrent.app.data.kategori.KategoriRepository
+import com.myrent.app.data.settings.NotaConfigDoc
+import com.myrent.app.data.settings.NotaConfigRepository
 import com.myrent.app.data.settings.StoreConfigDoc
 import com.myrent.app.data.settings.StoreConfigRepository
+import com.myrent.app.data.settings.StoreProfileDoc
+import com.myrent.app.data.settings.StoreProfileRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -30,6 +34,8 @@ class SettingsViewModel(
     private val authRepository: AuthRepository = AuthRepository(),
     private val kategoriRepository: KategoriRepository = KategoriRepository(),
     private val storeConfigRepository: StoreConfigRepository = StoreConfigRepository(),
+    private val storeProfileRepository: StoreProfileRepository = StoreProfileRepository(),
+    private val notaConfigRepository: NotaConfigRepository = NotaConfigRepository(),
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) : ViewModel() {
 
@@ -54,41 +60,44 @@ class SettingsViewModel(
     val storeConfig: StateFlow<StoreConfigDoc> = storeConfigRepository.getStoreConfigFlow()
         .stateIn(viewModelScope, SharingStarted.Lazily, StoreConfigDoc())
 
+    val storeProfile: StateFlow<StoreProfileDoc> = storeProfileRepository.getStoreProfileFlow()
+        .stateIn(viewModelScope, SharingStarted.Lazily, StoreProfileDoc())
+
+    val notaConfig: StateFlow<NotaConfigDoc> = notaConfigRepository.getNotaConfigFlow()
+        .stateIn(viewModelScope, SharingStarted.Lazily, NotaConfigDoc())
+
     init {
         loadUserProfile()
     }
 
     fun loadUserProfile() {
         viewModelScope.launch {
-            val profileRes = authRepository.getUserProfile()
-            profileRes.onSuccess { doc ->
-                var finalDoc = doc
-
-                // Migrasi 1x Aman untuk akun kusumarefina@gmail.com jika namaToko masih kosong/berisi UID
-                if (doc.email.equals("kusumarefina@gmail.com", ignoreCase = true) && (doc.namaToko.isEmpty() || doc.namaToko.length > 15)) {
-                    val uid = authRepository.currentUser?.uid
-                    if (!uid.isNullOrEmpty()) {
-                        try {
-                            firestore.collection("users").document(uid).update("namaToko", "Kusuma Rent").await()
-                            finalDoc = doc.copy(namaToko = "Kusuma Rent")
-                        } catch (e: Exception) {
-                            e.printStackTrace()
-                        }
-                    }
-                }
-
-                _userDocState.value = finalDoc
-                _userName.value = finalDoc.nama
-                _userNamaToko.value = finalDoc.namaToko.ifEmpty { "Nama toko belum diisi" }
-                _userEmail.value = finalDoc.email
+            authRepository.getUserProfileFlow().collect { doc ->
+                _userDocState.value = doc
+                _userName.value = doc.nama
+                _userNamaToko.value = doc.namaToko.ifEmpty { "Nama toko belum diisi" }
+                _userEmail.value = doc.email
             }
         }
     }
 
-    fun saveNotaConfig(header: String, footer: String, onSuccess: () -> Unit) {
+    fun saveFullNotaConfig(
+        judulNota: String,
+        kalimatPembuka: String,
+        catatanBawah: String,
+        flagTampilAlamat: Boolean,
+        flagTampilTelp: Boolean,
+        onSuccess: () -> Unit
+    ) {
         viewModelScope.launch {
             _uiState.value = SettingsUiState.Loading
-            val res = storeConfigRepository.saveNotaConfig(header, footer)
+            val res = notaConfigRepository.saveNotaConfig(
+                judulNota = judulNota,
+                kalimatPembuka = kalimatPembuka,
+                catatanBawah = catatanBawah,
+                flagTampilAlamat = flagTampilAlamat,
+                flagTampilTelp = flagTampilTelp
+            )
             res.onSuccess {
                 _uiState.value = SettingsUiState.Idle
                 onSuccess()
@@ -98,25 +107,24 @@ class SettingsViewModel(
         }
     }
 
-    fun saveWaTemplates(
-        templateNota: String,
+    fun saveWaFollowUpTemplates(
         templateH1: String,
-        templateH: String,
+        templateHariH: String,
+        templateTelat: String,
         onSuccess: () -> Unit
     ) {
-        if (templateNota.trim().isEmpty() || templateH1.trim().isEmpty() || templateH.trim().isEmpty()) {
-            _uiState.value = SettingsUiState.Error("Template pesan WhatsApp tidak boleh kosong.")
-            return
-        }
-
         viewModelScope.launch {
             _uiState.value = SettingsUiState.Loading
-            val res = storeConfigRepository.saveWaTemplates(templateNota, templateH1, templateH)
+            val res = notaConfigRepository.saveWaTemplates(
+                templateH1 = templateH1,
+                templateHariH = templateHariH,
+                templateTelat = templateTelat
+            )
             res.onSuccess {
                 _uiState.value = SettingsUiState.Idle
                 onSuccess()
             }.onFailure {
-                _uiState.value = SettingsUiState.Error("Gagal menyimpan template WhatsApp, periksa koneksi internet.")
+                _uiState.value = SettingsUiState.Error("Gagal menyimpan pesan follow-up, periksa koneksi internet.")
             }
         }
     }
@@ -132,8 +140,8 @@ class SettingsViewModel(
             res.onSuccess {
                 _uiState.value = SettingsUiState.Idle
                 onSuccess()
-            }.onFailure {
-                _uiState.value = SettingsUiState.Error("Gagal menambah kategori, periksa koneksi internet.")
+            }.onFailure { e ->
+                _uiState.value = SettingsUiState.Error(e.message ?: "Gagal menambah kategori, periksa koneksi internet.")
             }
         }
     }
@@ -149,8 +157,8 @@ class SettingsViewModel(
             res.onSuccess {
                 _uiState.value = SettingsUiState.Idle
                 onSuccess()
-            }.onFailure {
-                _uiState.value = SettingsUiState.Error("Gagal mengubah kategori, periksa koneksi internet.")
+            }.onFailure { e ->
+                _uiState.value = SettingsUiState.Error(e.message ?: "Gagal mengubah kategori, periksa koneksi internet.")
             }
         }
     }

@@ -7,9 +7,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.FirebaseFirestore
 import com.myrent.app.data.auth.AuthRepository
+import com.myrent.app.data.auth.UserDoc
 import com.myrent.app.data.rentals.Rental
 import com.myrent.app.data.rentals.RentalRepository
+import com.myrent.app.data.settings.DefaultStoreConfig
+import com.myrent.app.data.settings.StoreConfigDoc
+import com.myrent.app.data.settings.StoreConfigRepository
+import com.myrent.app.data.settings.TemplateReplacer
 import com.myrent.app.ui.screens.formatDate
+import com.myrent.app.ui.screens.formatRupiah
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
@@ -22,7 +28,8 @@ import java.util.Calendar
 
 data class FollowUpItem(
     val rental: Rental,
-    val type: String, // "H-1" atau "Hari H"
+    val type: String,          // "TELAT", "Hari H", "H-1"
+    val overdueDays: Int = 0,   // Selisih hari terlambat jika type == "TELAT"
     val isFollowedUp: Boolean
 )
 
@@ -32,8 +39,12 @@ data class FollowUpItem(
 class HomeViewModel(
     private val authRepository: AuthRepository = AuthRepository(),
     private val rentalRepository: RentalRepository = RentalRepository(),
+    private val storeConfigRepository: StoreConfigRepository = StoreConfigRepository(),
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) : ViewModel() {
+
+    private val _userDocState = MutableStateFlow(UserDoc())
+    val userDocState: StateFlow<UserDoc> = _userDocState.asStateFlow()
 
     private val _userNamaToko = MutableStateFlow("")
     val userNamaToko: StateFlow<String> = _userNamaToko.asStateFlow()
@@ -72,16 +83,58 @@ class HomeViewModel(
     val followUpList: StateFlow<List<FollowUpItem>> = _allRentals.map { rentals ->
         val list = mutableListOf<FollowUpItem>()
         val todayMs = System.currentTimeMillis()
-        val tomorrowMs = todayMs + (24 * 60 * 60 * 1000L)
+
+        val calToday = Calendar.getInstance().apply {
+            timeInMillis = todayMs
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val todayStartMs = calToday.timeInMillis
+
+        val calTomorrow = Calendar.getInstance().apply {
+            timeInMillis = todayMs
+            add(Calendar.DAY_OF_YEAR, 1)
+            set(Calendar.HOUR_OF_DAY, 0)
+            set(Calendar.MINUTE, 0)
+            set(Calendar.SECOND, 0)
+            set(Calendar.MILLISECOND, 0)
+        }
+        val tomorrowStartMs = calTomorrow.timeInMillis
 
         rentals.filter { it.status == "berjalan" }.forEach { rental ->
-            if (isSameDay(rental.tanggalKembali, todayMs)) {
-                list.add(FollowUpItem(rental, "Hari H", rental.sudahFollowUpH))
-            } else if (isSameDay(rental.tanggalKembali, tomorrowMs)) {
-                list.add(FollowUpItem(rental, "H-1", rental.sudahFollowUpH1))
+            val calReturn = Calendar.getInstance().apply {
+                timeInMillis = rental.tanggalKembali
+                set(Calendar.HOUR_OF_DAY, 0)
+                set(Calendar.MINUTE, 0)
+                set(Calendar.SECOND, 0)
+                set(Calendar.MILLISECOND, 0)
+            }
+            val returnStartMs = calReturn.timeInMillis
+
+            if (returnStartMs < todayStartMs) {
+                val daysOverdue = ((todayStartMs - returnStartMs) / (24 * 60 * 60 * 1000L)).toInt().coerceAtLeast(1)
+                val isFollowedUp = rental.sudahFollowUpH
+                list.add(FollowUpItem(rental, "TELAT", daysOverdue, isFollowedUp))
+            } else if (returnStartMs == todayStartMs) {
+                list.add(FollowUpItem(rental, "Hari H", 0, rental.sudahFollowUpH))
+            } else if (returnStartMs == tomorrowStartMs) {
+                list.add(FollowUpItem(rental, "H-1", 0, rental.sudahFollowUpH1))
             }
         }
-        list.sortedBy { it.isFollowedUp }
+
+        list.sortedWith(
+            compareBy<FollowUpItem> { it.isFollowedUp }
+                .thenBy { item ->
+                    when (item.type) {
+                        "TELAT" -> 0
+                        "Hari H" -> 1
+                        else -> 2
+                    }
+                }
+                .thenByDescending { it.overdueDays }
+        )
     }.stateIn(viewModelScope, SharingStarted.Lazily, emptyList())
 
     init {
@@ -92,6 +145,7 @@ class HomeViewModel(
         viewModelScope.launch {
             launch {
                 authRepository.getUserProfileFlow().collect { userDoc ->
+                    _userDocState.value = userDoc
                     _userNamaToko.value = userDoc.namaToko.ifEmpty { "Kusuma Rent" }
                 }
             }
@@ -111,26 +165,42 @@ class HomeViewModel(
             formattedNo = "62" + formattedNo.substring(1)
         }
 
-        val tglStr = formatDate(rental.tanggalKembali)
-        val pesan = if (item.type == "H-1") {
-            "Halo ${rental.namaPenyewa}, kami mengingatkan bahwa ${rental.namaBarang} dijadwalkan dikembalikan besok, $tglStr. Terima kasih."
-        } else {
-            "Halo ${rental.namaPenyewa}, hari ini jadwal pengembalian ${rental.namaBarang}. Mohon dikembalikan hari ini ya. Terima kasih."
-        }
-
         viewModelScope.launch {
+            val userDoc = authRepository.getUserProfile().getOrDefault(UserDoc())
+            val storeConfig = storeConfigRepository.getStoreConfig().getOrDefault(StoreConfigDoc())
+
+            val rawTemplate = when (item.type) {
+                "TELAT" -> storeConfig.templatePesanTelat.ifEmpty { DefaultStoreConfig.TEMPLATE_TELAT_DEFAULT }
+                "H-1" -> storeConfig.templatePesanH1.ifEmpty { DefaultStoreConfig.TEMPLATE_H1_DEFAULT }
+                else -> storeConfig.templatePesanH.ifEmpty { DefaultStoreConfig.TEMPLATE_H_DEFAULT }
+            }
+
+            val tglStr = formatDate(rental.tanggalKembali)
+            val pesan = TemplateReplacer.replaceVariables(
+                template = rawTemplate,
+                nama = rental.namaPenyewa,
+                barang = "${rental.namaBarang} (${rental.jumlah} unit)",
+                tanggal = tglStr,
+                total = formatRupiah(rental.hargaTotal),
+                dp = formatRupiah(rental.dp),
+                sisa = formatRupiah(rental.sisaBayar),
+                invoice = rental.invoiceId,
+                toko = userDoc.namaToko.ifEmpty { "Kusuma Rent" },
+                telat = item.overdueDays.toString()
+            )
+
             val fieldToUpdate = if (item.type == "H-1") "sudahFollowUpH1" else "sudahFollowUpH"
             val uid = authRepository.currentUser?.uid ?: ""
             if (uid.isNotEmpty()) {
                 firestore.collection("toko").document(uid).collection("rentals").document(rental.id).update(fieldToUpdate, true).await()
             }
-        }
 
-        try {
-            val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/$formattedNo?text=${Uri.encode(pesan)}"))
-            context.startActivity(intent)
-        } catch (e: Exception) {
-            e.printStackTrace()
+            try {
+                val intent = Intent(Intent.ACTION_VIEW, Uri.parse("https://wa.me/$formattedNo?text=${Uri.encode(pesan)}"))
+                context.startActivity(intent)
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
         }
     }
 

@@ -17,16 +17,19 @@ class KategoriRepository(
     private val currentUid: String
         get() = auth.currentUser?.uid ?: ""
 
+    private val isEmailVerified: Boolean
+        get() = auth.currentUser?.isEmailVerified == true
+
     private fun getKategoriCollection(uid: String = currentUid) =
         firestore.collection("toko").document(uid.ifEmpty { "global" }).collection("kategori")
 
     /**
-     * Mendapatkan daftar kategori secara realtime via Flow milik akun toko.
-     * Jika koleksi toko/{uid}/kategori masih kosong, otomatis menambahkan kategori "Jas".
+     * Mendapatkan daftar kategori secara realtime via Flow milik akun toko (toko/{uid}/kategori).
+     * Membaca murni dari toko/{uid}/kategori tanpa membuat kategori ganda otomatis saat kosong.
      */
     fun getKategoriFlow(): Flow<List<Kategori>> = callbackFlow {
         val uid = currentUid
-        if (uid.isEmpty()) {
+        if (uid.isEmpty() || !isEmailVerified) {
             trySend(emptyList())
             awaitClose { }
             return@callbackFlow
@@ -34,48 +37,71 @@ class KategoriRepository(
 
         val userKatRef = getKategoriCollection(uid)
 
-        // Cek migrasi data lama jika brankas toko/{uid}/kategori akun ini masih kosong
-        userKatRef.limit(1).get().addOnSuccessListener { userSnap ->
-            if (userSnap.isEmpty) {
-                firestore.collection("kategori").get().addOnSuccessListener { legacySnap ->
-                    if (!legacySnap.isEmpty) {
-                        legacySnap.documents.forEach { doc ->
-                            userKatRef.document(doc.id).set(doc.data ?: emptyMap<String, Any>())
-                        }
-                    } else {
-                        userKatRef.add(mapOf("nama" to "Jas"))
-                    }
-                }
-            }
-        }
-
         val listener = userKatRef.addSnapshotListener { snapshot, error ->
             if (error != null) {
-                close(error)
+                trySend(emptyList())
                 return@addSnapshotListener
             }
-            val list = snapshot?.documents?.map { doc ->
-                Kategori(id = doc.id, nama = doc.getString("nama") ?: "")
+            val list = snapshot?.documents?.mapNotNull { doc ->
+                val nama = doc.getString("nama") ?: ""
+                if (nama.isNotEmpty()) Kategori(id = doc.id, nama = nama) else null
             } ?: emptyList()
-
-            if (list.isEmpty()) {
-                userKatRef.add(mapOf("nama" to "Jas"))
-            }
 
             trySend(list)
         }
         awaitClose { listener.remove() }
     }
 
+    /**
+     * Menambah kategori baru dengan pencegahan nama ganda (tidak membedakan huruf besar/kecil)
+     */
     suspend fun tambahKategori(nama: String): Result<Unit> = runCatching {
-        getKategoriCollection().add(mapOf("nama" to nama.trim())).await()
+        val uid = currentUid
+        require(uid.isNotEmpty() && isEmailVerified) { "Pengguna belum login atau email belum diverifikasi" }
+        val trimmed = nama.trim()
+        require(trimmed.isNotEmpty()) { "Nama kategori tidak boleh kosong." }
+
+        val userKatRef = getKategoriCollection(uid)
+        val existingDocs = userKatRef.get().await()
+        val isDuplicate = existingDocs.documents.any {
+            (it.getString("nama") ?: "").equals(trimmed, ignoreCase = true)
+        }
+
+        if (isDuplicate) {
+            error("Kategori \"$trimmed\" sudah ada.")
+        }
+
+        userKatRef.add(mapOf("nama" to trimmed)).await()
     }
 
+    /**
+     * Mengedit nama kategori dengan pencegahan nama ganda
+     */
     suspend fun editKategori(id: String, namaBaru: String): Result<Unit> = runCatching {
-        getKategoriCollection().document(id).update("nama", namaBaru.trim()).await()
+        val uid = currentUid
+        require(uid.isNotEmpty() && isEmailVerified) { "Pengguna belum login atau email belum diverifikasi" }
+        val trimmed = namaBaru.trim()
+        require(trimmed.isNotEmpty()) { "Nama kategori tidak boleh kosong." }
+
+        val userKatRef = getKategoriCollection(uid)
+        val existingDocs = userKatRef.get().await()
+        val isDuplicate = existingDocs.documents.any {
+            it.id != id && (it.getString("nama") ?: "").equals(trimmed, ignoreCase = true)
+        }
+
+        if (isDuplicate) {
+            error("Kategori \"$trimmed\" sudah ada.")
+        }
+
+        userKatRef.document(id).update("nama", trimmed).await()
     }
 
+    /**
+     * Menghapus dokumen kategori dari toko/{uid}/kategori/{id}
+     */
     suspend fun hapusKategori(id: String): Result<Unit> = runCatching {
-        getKategoriCollection().document(id).delete().await()
+        val uid = currentUid
+        require(uid.isNotEmpty() && isEmailVerified) { "Pengguna belum login atau email belum diverifikasi" }
+        getKategoriCollection(uid).document(id).delete().await()
     }
 }

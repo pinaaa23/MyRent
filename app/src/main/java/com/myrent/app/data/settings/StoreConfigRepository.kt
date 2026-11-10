@@ -18,6 +18,9 @@ class StoreConfigRepository(
     private val currentUid: String
         get() = auth.currentUser?.uid ?: ""
 
+    private val isEmailVerified: Boolean
+        get() = auth.currentUser?.isEmailVerified == true
+
     private fun getConfigDocRef(uid: String = currentUid) =
         firestore.collection("toko").document(uid.ifEmpty { "global" }).collection("settings").document("config")
 
@@ -26,7 +29,7 @@ class StoreConfigRepository(
      */
     fun getStoreConfigFlow(): Flow<StoreConfigDoc> = callbackFlow {
         val uid = currentUid
-        if (uid.isEmpty()) {
+        if (uid.isEmpty() || !isEmailVerified) {
             trySend(StoreConfigDoc())
             awaitClose { }
             return@callbackFlow
@@ -43,7 +46,8 @@ class StoreConfigRepository(
                 notaFooter = snapshot.getString("notaFooter") ?: "",
                 templatePesanNota = snapshot.getString("templatePesanNota") ?: "",
                 templatePesanH1 = snapshot.getString("templatePesanH1") ?: "",
-                templatePesanH = snapshot.getString("templatePesanH") ?: ""
+                templatePesanH = snapshot.getString("templatePesanH") ?: "",
+                templatePesanTelat = snapshot.getString("templatePesanTelat") ?: ""
             )
 
             trySend(doc)
@@ -57,7 +61,7 @@ class StoreConfigRepository(
      */
     suspend fun getStoreConfig(): Result<StoreConfigDoc> = runCatching {
         val uid = currentUid
-        if (uid.isEmpty()) return Result.success(StoreConfigDoc())
+        if (uid.isEmpty() || !isEmailVerified) return Result.success(StoreConfigDoc())
 
         val snapshot = getConfigDocRef(uid).get().await()
         if (!snapshot.exists()) return Result.success(StoreConfigDoc())
@@ -67,7 +71,8 @@ class StoreConfigRepository(
             notaFooter = snapshot.getString("notaFooter") ?: "",
             templatePesanNota = snapshot.getString("templatePesanNota") ?: "",
             templatePesanH1 = snapshot.getString("templatePesanH1") ?: "",
-            templatePesanH = snapshot.getString("templatePesanH") ?: ""
+            templatePesanH = snapshot.getString("templatePesanH") ?: "",
+            templatePesanTelat = snapshot.getString("templatePesanTelat") ?: ""
         )
     }
 
@@ -76,7 +81,7 @@ class StoreConfigRepository(
      */
     suspend fun saveNotaConfig(header: String, footer: String): Result<Unit> = runCatching {
         val uid = currentUid
-        require(uid.isNotEmpty()) { "Pengguna belum login" }
+        require(uid.isNotEmpty() && isEmailVerified) { "Pengguna belum login atau email belum diverifikasi" }
 
         val map = mapOf(
             "notaHeader" to header.trim(),
@@ -91,10 +96,11 @@ class StoreConfigRepository(
     suspend fun saveWaTemplates(
         templateNota: String,
         templateH1: String,
-        templateH: String
+        templateH: String,
+        templateTelat: String = ""
     ): Result<Unit> = runCatching {
         val uid = currentUid
-        require(uid.isNotEmpty()) { "Pengguna belum login" }
+        require(uid.isNotEmpty() && isEmailVerified) { "Pengguna belum login atau email belum diverifikasi" }
         require(templateNota.isNotBlank() && templateH1.isNotBlank() && templateH.isNotBlank()) {
             "Template pesan tidak boleh kosong."
         }
@@ -102,7 +108,8 @@ class StoreConfigRepository(
         val map = mapOf(
             "templatePesanNota" to templateNota.trim(),
             "templatePesanH1" to templateH1.trim(),
-            "templatePesanH" to templateH.trim()
+            "templatePesanH" to templateH.trim(),
+            "templatePesanTelat" to templateTelat.trim()
         )
         getConfigDocRef(uid).set(map, SetOptions.merge()).await()
     }

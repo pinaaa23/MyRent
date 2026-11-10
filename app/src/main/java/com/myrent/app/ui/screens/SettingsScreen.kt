@@ -72,12 +72,13 @@ import com.myrent.app.ui.theme.TextSecondary
 @Composable
 fun SettingsScreen(
     onNavigateBack: () -> Unit,
-    onNavigateToEditProfile: () -> Unit = {},
+    onNavigateToStoreProfile: () -> Unit = {},
     onNavigateToCustomReceipt: () -> Unit = {},
     onNavigateToWaTemplates: () -> Unit = {},
     onLogoutClick: () -> Unit,
     settingsViewModel: SettingsViewModel = viewModel()
 ) {
+    val storeProfile by settingsViewModel.storeProfile.collectAsState()
     val userDoc by settingsViewModel.userDocState.collectAsState()
     val userName by settingsViewModel.userName.collectAsState()
     val userNamaToko by settingsViewModel.userNamaToko.collectAsState()
@@ -87,6 +88,9 @@ fun SettingsScreen(
     var showLogoutConfirmDialog by remember { mutableStateOf(false) }
 
     val fotoRepo = remember { FotoRepository() }
+
+    val displayFotoBase64 = storeProfile.fotoBase64.ifEmpty { userDoc.fotoProfilBase64 }
+    val displayNamaToko = storeProfile.nama.ifEmpty { userNamaToko }
 
     Scaffold(
         topBar = {
@@ -108,11 +112,11 @@ fun SettingsScreen(
                 .padding(innerPadding)
                 .padding(16.dp)
         ) {
-            // Kartu Profil Pengguna & Nama Toko (Dapat Diketuk -> Edit Profil)
+            // Kartu Profil Pengguna & Nama Toko (Dapat Diketuk -> Profil Toko)
             Card(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .clickable { onNavigateToEditProfile() },
+                    .clickable { onNavigateToStoreProfile() },
                 shape = RoundedCornerShape(12.dp),
                 colors = CardDefaults.cardColors(containerColor = DarkSurface)
             ) {
@@ -120,8 +124,8 @@ fun SettingsScreen(
                     modifier = Modifier.padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    val avatarBitmap = remember(userDoc.fotoProfilBase64) {
-                        if (userDoc.fotoProfilBase64.isNotEmpty()) fotoRepo.base64ToBitmap(userDoc.fotoProfilBase64) else null
+                    val avatarBitmap = remember(displayFotoBase64) {
+                        if (displayFotoBase64.isNotEmpty()) fotoRepo.base64ToBitmap(displayFotoBase64) else null
                     }
 
                     Box(
@@ -134,7 +138,7 @@ fun SettingsScreen(
                         if (avatarBitmap != null) {
                             Image(
                                 bitmap = avatarBitmap.asImageBitmap(),
-                                contentDescription = "Logo Toko",
+                                contentDescription = "Foto Toko",
                                 contentScale = ContentScale.Crop,
                                 modifier = Modifier.fillMaxSize()
                             )
@@ -151,28 +155,28 @@ fun SettingsScreen(
                     Spacer(modifier = Modifier.width(16.dp))
 
                     Column(modifier = Modifier.weight(1f)) {
-                        Text(
-                            text = if (userName.isNotEmpty()) userName else "Pemilik Toko",
-                            fontSize = 18.sp,
-                            fontWeight = FontWeight.Bold,
-                            color = TextPrimary
-                        )
-                        Spacer(modifier = Modifier.height(2.dp))
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Icon(
                                 imageVector = Icons.Filled.Store,
                                 contentDescription = "Toko",
                                 tint = AccentGold,
-                                modifier = Modifier.size(14.dp)
+                                modifier = Modifier.size(16.dp)
                             )
                             Spacer(modifier = Modifier.width(4.dp))
                             Text(
-                                text = "Toko: $userNamaToko",
-                                fontSize = 13.sp,
-                                fontWeight = FontWeight.SemiBold,
-                                color = AccentGold
+                                text = displayNamaToko.ifEmpty { "Nama toko belum diisi" },
+                                fontSize = 17.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = TextPrimary
                             )
                         }
+                        Spacer(modifier = Modifier.height(2.dp))
+                        Text(
+                            text = if (userName.isNotEmpty()) "Pemilik: $userName" else "Pemilik Toko",
+                            fontSize = 13.sp,
+                            color = AccentGold,
+                            fontWeight = FontWeight.Medium
+                        )
                         Spacer(modifier = Modifier.height(2.dp))
                         Text(
                             text = userEmail,
@@ -185,7 +189,16 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // Menu 1: Kelola Kategori
+            // Menu 1: Profil Toko
+            SettingsMenuItem(
+                title = "Profil Toko",
+                icon = Icons.Filled.Store,
+                onClick = onNavigateToStoreProfile
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Menu 2: Kelola Kategori
             SettingsMenuItem(
                 title = stringResource(R.string.menu_manage_category),
                 icon = Icons.Filled.Category,
@@ -197,7 +210,7 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Menu 2: Kustom Nota
+            // Menu 3: Kustom Nota
             SettingsMenuItem(
                 title = "Kustom Nota",
                 icon = Icons.Filled.Receipt,
@@ -206,9 +219,9 @@ fun SettingsScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Menu 3: Template Pesan WA
+            // Menu 4: Kustom Pesan Follow Up
             SettingsMenuItem(
-                title = "Template Pesan WA",
+                title = "Kustom Pesan Follow Up",
                 icon = Icons.AutoMirrored.Filled.Message,
                 onClick = onNavigateToWaTemplates
             )

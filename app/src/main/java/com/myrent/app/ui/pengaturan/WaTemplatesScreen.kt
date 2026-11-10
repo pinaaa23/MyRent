@@ -340,10 +340,10 @@ fun WaTemplatesScreen(
             // Tombol Simpan Template
             Button(
                 onClick = {
-                    settingsViewModel.saveWaTemplates(
-                        templateNota = tfvNota.text,
+                    settingsViewModel.saveWaFollowUpTemplates(
                         templateH1 = tfvH1.text,
-                        templateH = tfvH.text,
+                        templateHariH = tfvH.text,
+                        templateTelat = "",
                         onSuccess = onBack
                     )
                 },

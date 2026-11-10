@@ -10,6 +10,8 @@ import com.myrent.app.ui.pengaturan.CustomReceiptScreen
 import com.myrent.app.ui.pengaturan.EditProfileScreen
 import com.myrent.app.ui.pengaturan.EditProfileViewModel
 import com.myrent.app.ui.pengaturan.SettingsViewModel
+import com.myrent.app.ui.pengaturan.StoreProfileScreen
+import com.myrent.app.ui.pengaturan.StoreProfileViewModel
 import com.myrent.app.ui.pengaturan.WaTemplatesScreen
 import com.myrent.app.ui.screens.CatalogScreen
 import com.myrent.app.ui.screens.CustomerScreen
@@ -19,7 +21,7 @@ import com.myrent.app.ui.screens.ReportScreen
 import com.myrent.app.ui.screens.SettingsScreen
 
 /**
- * Mengatur grafik navigasi (NavGraph) 5 menu utama aplikasi, Settings, Edit Profil, Kustom Nota, & Template WA
+ * Mengatur grafik navigasi (NavGraph) 5 menu utama aplikasi, Settings, Profil Toko, Edit Profil, Kustom Nota, & Template WA
  */
 @Composable
 fun AppNavGraph(
@@ -57,8 +59,8 @@ fun AppNavGraph(
                 onNavigateBack = {
                     navController.popBackStack()
                 },
-                onNavigateToEditProfile = {
-                    navController.navigate(Screen.EditProfile.route)
+                onNavigateToStoreProfile = {
+                    navController.navigate(Screen.StoreProfile.route)
                 },
                 onNavigateToCustomReceipt = {
                     navController.navigate(Screen.CustomReceipt.route)
@@ -68,6 +70,15 @@ fun AppNavGraph(
                 },
                 onLogoutClick = onLogoutClick,
                 settingsViewModel = settingsViewModel
+            )
+        }
+        composable(Screen.StoreProfile.route) {
+            val storeProfileViewModel: StoreProfileViewModel = viewModel()
+            StoreProfileScreen(
+                viewModel = storeProfileViewModel,
+                onBack = {
+                    navController.popBackStack()
+                }
             )
         }
         composable(Screen.EditProfile.route) {

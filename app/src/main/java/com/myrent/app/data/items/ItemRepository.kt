@@ -17,16 +17,18 @@ class ItemRepository(
     private val currentUid: String
         get() = auth.currentUser?.uid ?: ""
 
+    private val isEmailVerified: Boolean
+        get() = auth.currentUser?.isEmailVerified == true
+
     private fun getItemCollection(uid: String = currentUid) =
         firestore.collection("toko").document(uid.ifEmpty { "global" }).collection("items")
 
     /**
      * Mendapatkan semua daftar items milik akun terisolasi toko/{uid}/items secara realtime via Flow.
-     * Jika koleksi toko/{uid}/items masih kosong, otomatis melakukan migrasi 1x dari data lama.
      */
     fun getItemsFlow(): Flow<List<Item>> = callbackFlow {
         val uid = currentUid
-        if (uid.isEmpty()) {
+        if (uid.isEmpty() || !isEmailVerified) {
             trySend(emptyList())
             awaitClose { }
             return@callbackFlow
@@ -34,22 +36,9 @@ class ItemRepository(
 
         val userItemsRef = getItemCollection(uid)
 
-        // Cek migrasi data lama jika brankas toko/{uid}/items akun ini masih kosong
-        userItemsRef.limit(1).get().addOnSuccessListener { userSnap ->
-            if (userSnap.isEmpty) {
-                firestore.collection("items").get().addOnSuccessListener { legacySnap ->
-                    if (!legacySnap.isEmpty) {
-                        legacySnap.documents.forEach { doc ->
-                            userItemsRef.document(doc.id).set(doc.data ?: emptyMap<String, Any>())
-                        }
-                    }
-                }
-            }
-        }
-
         val listener = userItemsRef.addSnapshotListener { snapshot, error ->
             if (error != null) {
-                close(error)
+                trySend(emptyList())
                 return@addSnapshotListener
             }
             val list = snapshot?.documents?.map { doc ->
@@ -77,6 +66,9 @@ class ItemRepository(
     }
 
     suspend fun tambahItem(item: Item): Result<Unit> = runCatching {
+        val uid = currentUid
+        require(uid.isNotEmpty() && isEmailVerified) { "Pengguna belum login atau email belum diverifikasi" }
+
         val map = mapOf(
             "cabangId" to item.cabangId,
             "nama" to item.nama,
@@ -90,10 +82,13 @@ class ItemRepository(
             "catatan" to item.catatan,
             "dibuatPada" to item.dibuatPada
         )
-        getItemCollection().add(map).await()
+        getItemCollection(uid).add(map).await()
     }
 
     suspend fun updateItem(item: Item): Result<Unit> = runCatching {
+        val uid = currentUid
+        require(uid.isNotEmpty() && isEmailVerified) { "Pengguna belum login atau email belum diverifikasi" }
+
         val map = mapOf(
             "nama" to item.nama,
             "kategori" to item.kategori,
@@ -105,10 +100,13 @@ class ItemRepository(
             "status" to item.status,
             "catatan" to item.catatan
         )
-        getItemCollection().document(item.id).update(map).await()
+        getItemCollection(uid).document(item.id).update(map).await()
     }
 
     suspend fun hapusItem(id: String): Result<Unit> = runCatching {
-        getItemCollection().document(id).delete().await()
+        val uid = currentUid
+        require(uid.isNotEmpty() && isEmailVerified) { "Pengguna belum login atau email belum diverifikasi" }
+
+        getItemCollection(uid).document(id).delete().await()
     }
 }

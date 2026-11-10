@@ -9,6 +9,7 @@ import com.google.firebase.auth.FirebaseAuthUserCollisionException
 import com.google.firebase.auth.FirebaseUser
 import com.myrent.app.R
 import com.myrent.app.data.auth.AuthRepository
+import com.myrent.app.data.auth.UserDoc
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -39,6 +40,8 @@ class AuthViewModel(
         get() = authRepository.currentUser
 
     fun getCurrentUserEmail(): String = currentUser?.email ?: ""
+
+    suspend fun getUserProfile(): Result<UserDoc> = authRepository.getUserProfile()
 
     /**
      * Memeriksa status login dan verifikasi email pengguna

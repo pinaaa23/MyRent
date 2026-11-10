@@ -36,8 +36,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -51,6 +53,9 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.myrent.app.R
+import com.myrent.app.data.settings.LocalStoreProfileCache
+import com.myrent.app.data.settings.StoreProfileDoc
+import com.myrent.app.data.settings.StoreProfileRepository
 import com.myrent.app.ui.beranda.FollowUpItem
 import com.myrent.app.ui.beranda.HomeViewModel
 import com.myrent.app.ui.theme.AccentGold
@@ -60,7 +65,7 @@ import com.myrent.app.ui.theme.TextPrimary
 import com.myrent.app.ui.theme.TextSecondary
 
 /**
- * Layar Utama Beranda (Dashboard Ringkasan & Daftar Perlu di-Follow Up WA)
+ * Layar Utama Beranda (Dashboard Ringkasan & Daftar Perlu di-Follow Up WA Termasuk Keterlambatan)
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -69,11 +74,26 @@ fun HomeScreen(
     homeViewModel: HomeViewModel = viewModel()
 ) {
     val context = LocalContext.current
+    val userDoc by homeViewModel.userDocState.collectAsState()
     val userNamaToko by homeViewModel.userNamaToko.collectAsState()
+
+    val storeProfileRepo = remember { StoreProfileRepository() }
+    val storeProfile by storeProfileRepo.getStoreProfileFlow().collectAsState(StoreProfileDoc())
+
+    val displayNamaToko = storeProfile.nama.ifEmpty { userNamaToko }
+
     val sewaBerjalanCount by homeViewModel.sewaBerjalanCount.collectAsState()
     val jatuhTempoHariIniCount by homeViewModel.jatuhTempoHariIniCount.collectAsState()
     val omzetHariIni by homeViewModel.omzetHariIni.collectAsState()
     val followUpList by homeViewModel.followUpList.collectAsState()
+
+    LaunchedEffect(userDoc, storeProfile, userNamaToko) {
+        val nama = storeProfile.nama.ifEmpty { userNamaToko }
+        val foto = storeProfile.fotoBase64.ifEmpty { userDoc.fotoProfilBase64 }
+        if (nama.isNotEmpty()) {
+            LocalStoreProfileCache.saveCache(context, nama, foto)
+        }
+    }
 
     Scaffold(
         topBar = {
@@ -86,9 +106,9 @@ fun HomeScreen(
                             fontWeight = FontWeight.Bold,
                             fontSize = 20.sp
                         )
-                        if (userNamaToko.isNotEmpty()) {
+                        if (displayNamaToko.isNotEmpty()) {
                             Text(
-                                text = userNamaToko,
+                                text = displayNamaToko,
                                 color = AccentGold,
                                 fontSize = 12.sp,
                                 fontWeight = FontWeight.Medium
@@ -223,7 +243,7 @@ fun HomeScreen(
                     verticalArrangement = Arrangement.spacedBy(10.dp),
                     modifier = Modifier.fillMaxSize()
                 ) {
-                    items(followUpList, key = { "${it.rental.id}_${it.type}" }) { item ->
+                    items(followUpList, key = { "${it.rental.id}_${it.type}_${it.overdueDays}" }) { item ->
                         FollowUpCard(
                             item = item,
                             onKirimWaClick = {
@@ -287,7 +307,7 @@ fun SummaryCard(
 }
 
 /**
- * Kartu Barang yang Perlu di-Follow Up WhatsApp
+ * Kartu Barang yang Perlu di-Follow Up WhatsApp (Mendukung Tampilan Telat N Hari)
  */
 @Composable
 fun FollowUpCard(
@@ -310,9 +330,17 @@ fun FollowUpCard(
         ) {
             Column(modifier = Modifier.weight(1f)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
-                    // Badge Type H-1 / Hari H
-                    val tagBg = if (item.type == "Hari H") Color(0xFFC62828) else AccentGold
-                    val tagText = if (item.type == "Hari H") stringResource(R.string.tag_due_today) else stringResource(R.string.tag_due_tomorrow)
+                    // Badge Type: TELAT (Merah), Hari H (Merah/Garis), H-1 (Emas)
+                    val tagBg = when (item.type) {
+                        "TELAT" -> Color(0xFFC62828)
+                        "Hari H" -> Color(0xFFD32F2F)
+                        else -> AccentGold
+                    }
+                    val tagText = when (item.type) {
+                        "TELAT" -> "Telat ${item.overdueDays} hari"
+                        "Hari H" -> stringResource(R.string.tag_due_today)
+                        else -> stringResource(R.string.tag_due_tomorrow)
+                    }
 
                     Box(
                         modifier = Modifier
@@ -324,7 +352,7 @@ fun FollowUpCard(
                             text = tagText,
                             fontSize = 10.sp,
                             fontWeight = FontWeight.Bold,
-                            color = if (item.type == "Hari H") Color.White else DarkBackground
+                            color = if (item.type == "TELAT" || item.type == "Hari H") Color.White else DarkBackground
                         )
                     }
 
@@ -351,7 +379,7 @@ fun FollowUpCard(
                 Text(
                     text = "Kembali: ${formatDate(rental.tanggalKembali)}",
                     fontSize = 12.sp,
-                    color = TextSecondary
+                    color = if (item.type == "TELAT") Color(0xFFFF6B6B) else TextSecondary
                 )
             }
 

@@ -19,14 +19,17 @@ sealed class Screen(
     val icon: ImageVector? = null
 ) {
     // Rute Layar Otentikasi & Akun
+    object Splash : Screen("splash")
     object Login : Screen("login")
     object Register : Screen("register")
     object VerifyEmail : Screen("verify_email")
     object ForgotPassword : Screen("forgot_password")
     object MainApp : Screen("main_app")
     object Settings : Screen("settings")
+    object StoreProfile : Screen("store_profile")
     object EditProfile : Screen("edit_profile")
     object CustomReceipt : Screen("custom_receipt")
+    object CustomFollowUp : Screen("custom_followup")
     object WaTemplates : Screen("wa_templates")
 
     // Rute Bottom Navigation Menu (5 Menu)

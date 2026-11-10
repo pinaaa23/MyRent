@@ -5,42 +5,41 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.background
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Scaffold
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.mutableStateOf
-import androidx.compose.runtime.remember
-import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
+import com.myrent.app.data.settings.LocalStoreProfileCache
 import com.myrent.app.ui.auth.AuthViewModel
 import com.myrent.app.ui.auth.ForgotPasswordScreen
 import com.myrent.app.ui.auth.LoginScreen
 import com.myrent.app.ui.auth.RegisterScreen
+import com.myrent.app.ui.auth.SplashScreen
 import com.myrent.app.ui.auth.VerifyEmailScreen
 import com.myrent.app.ui.navigation.AppNavGraph
 import com.myrent.app.ui.navigation.CustomBottomNavigation
 import com.myrent.app.ui.navigation.Screen
-import com.myrent.app.ui.theme.AccentGold
 import com.myrent.app.ui.theme.DarkBackground
 import com.myrent.app.ui.theme.MyRentTheme
+import kotlinx.coroutines.launch
 
 /**
- * Activity Utama Aplikasi MyRent
+ * Activity Utama Aplikasi MyRent dengan System & In-App Splash Screen
  */
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
+        val splashScreen = installSplashScreen()
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
         setContent {
@@ -52,45 +51,41 @@ class MainActivity : ComponentActivity() {
 }
 
 /**
- * Pengatur Navigasi Utama Aplikasi (Auth, Verify Email, dan Main App)
+ * Pengatur Navigasi Utama Aplikasi (Splash In-App, Auth, Verify Email, dan Main App)
  */
 @Composable
 fun RootAppNavigation(
     authViewModel: AuthViewModel = viewModel()
 ) {
     val navController = rememberNavController()
-
-    // Status pengecekan sesi login saat pertama kali aplikasi dibuka
-    var isCheckingSession by remember { mutableStateOf(true) }
-    var startDestination by remember { mutableStateOf(Screen.Login.route) }
-
-    LaunchedEffect(Unit) {
-        val (isLoggedIn, isVerified) = authViewModel.isUserLoggedInAndVerified()
-        startDestination = when {
-            !isLoggedIn -> Screen.Login.route
-            !isVerified -> Screen.VerifyEmail.route
-            else -> Screen.MainApp.route
-        }
-        isCheckingSession = false
-    }
-
-    // Tampilkan layar splash/loading kosong singkat saat memeriksa status sesi
-    if (isCheckingSession) {
-        Box(
-            modifier = Modifier
-                .fillMaxSize()
-                .background(DarkBackground),
-            contentAlignment = Alignment.Center
-        ) {
-            CircularProgressIndicator(color = AccentGold)
-        }
-        return
-    }
+    val coroutineScope = rememberCoroutineScope()
+    val context = LocalContext.current
 
     NavHost(
         navController = navController,
-        startDestination = startDestination
+        startDestination = Screen.Splash.route
     ) {
+        composable(Screen.Splash.route) {
+            SplashScreen(
+                viewModel = authViewModel,
+                onNavigateToMain = {
+                    navController.navigate(Screen.MainApp.route) {
+                        popUpTo(Screen.Splash.route) { inclusive = true }
+                    }
+                },
+                onNavigateToVerifyEmail = {
+                    navController.navigate(Screen.VerifyEmail.route) {
+                        popUpTo(Screen.Splash.route) { inclusive = true }
+                    }
+                },
+                onNavigateToLogin = {
+                    navController.navigate(Screen.Login.route) {
+                        popUpTo(Screen.Splash.route) { inclusive = true }
+                    }
+                }
+            )
+        }
+
         composable(Screen.Login.route) {
             LoginScreen(
                 viewModel = authViewModel,
@@ -142,6 +137,10 @@ fun RootAppNavigation(
                     }
                 },
                 onChangeAccount = {
+                    coroutineScope.launch {
+                        LocalStoreProfileCache.clearCache(context)
+                    }
+                    authViewModel.logout()
                     navController.navigate(Screen.Login.route) {
                         popUpTo(Screen.VerifyEmail.route) { inclusive = true }
                     }
@@ -164,6 +163,9 @@ fun RootAppNavigation(
         composable(Screen.MainApp.route) {
             MainScreen(
                 onLogout = {
+                    coroutineScope.launch {
+                        LocalStoreProfileCache.clearCache(context)
+                    }
                     authViewModel.logout()
                     navController.navigate(Screen.Login.route) {
                         popUpTo(Screen.MainApp.route) { inclusive = true }
@@ -175,7 +177,7 @@ fun RootAppNavigation(
 }
 
 /**
- * Layar Kontainer Aplikasi Utama (4 Menu Bottom Nav & Settings)
+ * Layar Kontainer Aplikasi Utama (5 Menu Bottom Nav & Settings)
  */
 @Composable
 fun MainScreen(
@@ -191,7 +193,12 @@ fun MainScreen(
             .background(DarkBackground),
         containerColor = DarkBackground,
         bottomBar = {
-            if (currentRoute != Screen.Settings.route) {
+            if (currentRoute != Screen.Settings.route &&
+                currentRoute != Screen.StoreProfile.route &&
+                currentRoute != Screen.EditProfile.route &&
+                currentRoute != Screen.CustomReceipt.route &&
+                currentRoute != Screen.CustomFollowUp.route &&
+                currentRoute != Screen.WaTemplates.route) {
                 CustomBottomNavigation(
                     currentRoute = currentRoute,
                     onItemSelected = { screen ->

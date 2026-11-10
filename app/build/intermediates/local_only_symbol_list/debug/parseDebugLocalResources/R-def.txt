@@ -158,5 +158,6 @@ string title_rental_detail
 string title_rentals
 string title_settings
 string title_verify_email
+style Theme.App.Starting
 style Theme.MyRent
 xml file_paths

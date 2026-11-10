@@ -14,7 +14,7 @@ import kotlinx.coroutines.tasks.await
 import java.util.Calendar
 
 /**
- * Worker pengingat lokal harian untuk mengecek transaksi sewa yang perlu di-follow up
+ * Worker pengingat lokal harian untuk mengecek transaksi sewa yang perlu di-follow up di toko/{uid}/rentals
  */
 class FollowUpWorker(
     context: Context,
@@ -27,30 +27,29 @@ class FollowUpWorker(
             val firestore = FirebaseFirestore.getInstance()
             val user = auth.currentUser ?: return Result.success()
 
-            val userDoc = firestore.collection("users").document(user.uid).get().await()
-            val cabangId = userDoc.getString("cabangId") ?: ""
+            // Jika email belum diverifikasi, jangan membaca data toko
+            if (!user.isEmailVerified) return Result.success()
 
-            if (cabangId.isNotEmpty()) {
-                val snapshot = firestore.collection("rentals")
-                    .whereEqualTo("cabangId", cabangId)
-                    .whereEqualTo("status", "berjalan")
-                    .get()
-                    .await()
+            val snapshot = firestore.collection("toko")
+                .document(user.uid)
+                .collection("rentals")
+                .whereEqualTo("status", "berjalan")
+                .get()
+                .await()
 
-                val now = System.currentTimeMillis()
-                val tomorrow = now + (24 * 60 * 60 * 1000L)
+            val now = System.currentTimeMillis()
+            val tomorrow = now + (24 * 60 * 60 * 1000L)
 
-                var countNeedFollowUp = 0
-                snapshot.documents.forEach { doc ->
-                    val tglKembali = doc.getLong("tanggalKembali") ?: 0L
-                    if (isSameDay(tglKembali, now) || isSameDay(tglKembali, tomorrow)) {
-                        countNeedFollowUp++
-                    }
+            var countNeedFollowUp = 0
+            snapshot.documents.forEach { doc ->
+                val tglKembali = doc.getLong("tanggalKembali") ?: 0L
+                if (isSameDay(tglKembali, now) || isSameDay(tglKembali, tomorrow)) {
+                    countNeedFollowUp++
                 }
+            }
 
-                if (countNeedFollowUp > 0) {
-                    showNotification(applicationContext, countNeedFollowUp)
-                }
+            if (countNeedFollowUp > 0) {
+                showNotification(applicationContext, countNeedFollowUp)
             }
 
             Result.success()

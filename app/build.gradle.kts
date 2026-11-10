@@ -53,6 +53,7 @@ dependencies {
     implementation(libs.androidx.navigation.compose)
     implementation(libs.androidx.work.runtime.ktx)
     implementation(libs.androidx.exifinterface)
+    implementation(libs.androidx.core.splashscreen)
 
     // Firebase (BoM, Analytics, Authentication, Firestore)
     implementation(platform(libs.firebase.bom))

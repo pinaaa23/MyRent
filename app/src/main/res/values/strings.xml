@@ -124,7 +124,7 @@
     <!-- Sewa / Transaksi -->
     <string name="title_rentals">Sewa Barang</string>
     <string name="placeholder_search_rental">Cari nama penyewa atau No WA...</string>
-    <string name="btn_new_rental">+ Sewa Baru</string>
+    <string name="btn_new_rental">Sewa Baru</string>
     <string name="empty_rentals_title">Belum Ada Transaksi Sewa</string>
     <string name="empty_rentals_desc">Belum ada sewa tercatat di toko ini. Ketuk + Sewa Baru untuk mencatat sewa.</string>
     <string name="filter_active">Berjalan</string>

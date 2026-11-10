@@ -66,6 +66,7 @@ import com.myrent.app.ui.theme.DarkSurfaceVariant
 import com.myrent.app.ui.theme.TextPrimary
 import com.myrent.app.ui.theme.TextSecondary
 import java.text.SimpleDateFormat
+import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
@@ -94,7 +95,6 @@ fun RentalScreen(
 
     val filterOptions = listOf("Semua", "Berjalan", "Hampir Jatuh Tempo", "Terlambat", "Selesai")
 
-    // LANGKAH 1: Layar Penuh "Pilih Barang"
     if (showPilihBarangScreen) {
         PilihBarangScreen(
             catalogViewModel = catalogViewModel,
@@ -128,10 +128,10 @@ fun RentalScreen(
                 modifier = Modifier.padding(bottom = 8.dp)
             ) {
                 Row(
-                    modifier = Modifier.padding(horizontal = 16.dp),
+                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Icon(imageVector = Icons.Filled.Add, contentDescription = "Sewa Baru")
+                    Icon(imageVector = Icons.Filled.Add, contentDescription = "Sewa Baru", modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(6.dp))
                     Text(
                         text = stringResource(R.string.btn_new_rental),
@@ -147,7 +147,6 @@ fun RentalScreen(
                 .fillMaxSize()
                 .padding(innerPadding)
         ) {
-            // Header Judul
             Text(
                 text = stringResource(id = R.string.title_rentals),
                 fontSize = 22.sp,
@@ -156,7 +155,6 @@ fun RentalScreen(
                 modifier = Modifier.padding(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 8.dp)
             )
 
-            // Input Pencarian
             OutlinedTextField(
                 value = searchQuery,
                 onValueChange = { rentalViewModel.onSearchQueryChanged(it) },
@@ -176,7 +174,6 @@ fun RentalScreen(
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Baris Filter Chips
             LazyRow(
                 contentPadding = PaddingValues(horizontal = 16.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp),
@@ -200,7 +197,6 @@ fun RentalScreen(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // List Transaksi Sewa / Tampilan Kosong
             if (rentals.isEmpty()) {
                 Box(
                     modifier = Modifier
@@ -250,7 +246,6 @@ fun RentalScreen(
         }
     }
 
-    // LANGKAH 2: Bottom Sheet Form Sewa Baru / Edit
     if (showSewaBaruBottomSheet) {
         SewaBaruBottomSheet(
             sheetState = sheetStateForm,
@@ -265,7 +260,6 @@ fun RentalScreen(
         )
     }
 
-    // Bottom Sheet Detail Sewa
     if (selectedRentalForDetail != null) {
         DetailSewaBottomSheet(
             sheetState = sheetStateDetail,
@@ -282,13 +276,25 @@ fun RentalScreen(
 }
 
 /**
- * Kartu Transaksi Sewa di Daftar
+ * Kartu Transaksi Sewa di Daftar (Mendukung Status Terlambat dengan Badge Merah)
  */
 @Composable
 fun RentalCard(
     rental: Rental,
     onClick: () -> Unit
 ) {
+    val todayMs = System.currentTimeMillis()
+    val calToday = Calendar.getInstance().apply {
+        timeInMillis = todayMs
+        set(Calendar.HOUR_OF_DAY, 0)
+        set(Calendar.MINUTE, 0)
+        set(Calendar.SECOND, 0)
+        set(Calendar.MILLISECOND, 0)
+    }
+    val todayStartMs = calToday.timeInMillis
+
+    val isOverdue = rental.status == "berjalan" && rental.tanggalKembali < todayStartMs
+
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -309,10 +315,11 @@ fun RentalCard(
                     color = TextPrimary
                 )
 
-                // Status Badge
-                val (badgeBg, badgeText) = when (rental.status) {
-                    "selesai" -> Color(0xFF2E7D32) to stringResource(R.string.filter_completed)
-                    "terlambat" -> Color(0xFFC62828) to stringResource(R.string.filter_overdue)
+                // Status Badge: Selesai (Hijau), Terlambat (Merah), Berjalan (Emas)
+                val (badgeBg, badgeText) = when {
+                    rental.status == "selesai" -> Color(0xFF2E7D32) to stringResource(R.string.filter_completed)
+                    isOverdue -> Color(0xFFC62828) to "Terlambat"
+                    rental.status == "terlambat" -> Color(0xFFC62828) to stringResource(R.string.filter_overdue)
                     else -> AccentGold to stringResource(R.string.filter_active)
                 }
 
@@ -326,7 +333,7 @@ fun RentalCard(
                         text = badgeText,
                         fontSize = 11.sp,
                         fontWeight = FontWeight.Bold,
-                        color = if (rental.status == "berjalan") DarkBackground else Color.White
+                        color = if (rental.status == "berjalan" && !isOverdue) DarkBackground else Color.White
                     )
                 }
             }
@@ -349,7 +356,7 @@ fun RentalCard(
                 Text(
                     text = "${formatDate(rental.tanggalMulai)} - ${formatDate(rental.tanggalKembali)} (${rental.lamaHari} Hari)",
                     fontSize = 12.sp,
-                    color = TextSecondary
+                    color = if (isOverdue) Color(0xFFFF6B6B) else TextSecondary
                 )
 
                 val paymentText = if (rental.sisaBayar == 0L) {

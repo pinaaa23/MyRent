@@ -20,6 +20,9 @@ class RentalRepository(
     private val currentUid: String
         get() = auth.currentUser?.uid ?: ""
 
+    private val isEmailVerified: Boolean
+        get() = auth.currentUser?.isEmailVerified == true
+
     private fun getRentalsCollection(uid: String = currentUid) =
         firestore.collection("toko").document(uid.ifEmpty { "global" }).collection("rentals")
 
@@ -28,7 +31,7 @@ class RentalRepository(
 
     fun getRentalsFlow(): Flow<List<Rental>> = callbackFlow {
         val uid = currentUid
-        if (uid.isEmpty()) {
+        if (uid.isEmpty() || !isEmailVerified) {
             trySend(emptyList())
             awaitClose { }
             return@callbackFlow
@@ -36,22 +39,9 @@ class RentalRepository(
 
         val userRentalsRef = getRentalsCollection(uid)
 
-        // Migrasi data lama ke toko/{uid}/rentals jika brankas akun ini masih kosong
-        userRentalsRef.limit(1).get().addOnSuccessListener { userSnap ->
-            if (userSnap.isEmpty) {
-                firestore.collection("rentals").get().addOnSuccessListener { legacySnap ->
-                    if (!legacySnap.isEmpty) {
-                        legacySnap.documents.forEach { doc ->
-                            userRentalsRef.document(doc.id).set(doc.data ?: emptyMap<String, Any>())
-                        }
-                    }
-                }
-            }
-        }
-
         val listener = userRentalsRef.addSnapshotListener { snapshot, error ->
             if (error != null) {
-                close(error)
+                trySend(emptyList())
                 return@addSnapshotListener
             }
             val list = snapshot?.documents?.map { doc ->
@@ -91,6 +81,9 @@ class RentalRepository(
     }
 
     suspend fun tambahSewa(rental: Rental, itemId: String): Result<Rental> = runCatching {
+        val uid = currentUid
+        require(uid.isNotEmpty() && isEmailVerified) { "Pengguna belum login atau email belum diverifikasi" }
+
         val noWaNorm = normalizeNoWa(rental.noWa)
         val customerRes = customerRepository.upsertCustomer(
             nama = rental.namaPenyewa,
@@ -125,9 +118,9 @@ class RentalRepository(
             "jumlahPelunasan" to rental.jumlahPelunasan
         )
 
-        val docRef = getRentalsCollection().add(map).await()
+        val docRef = getRentalsCollection(uid).add(map).await()
 
-        val itemDocRef = getItemsCollection().document(itemId)
+        val itemDocRef = getItemsCollection(uid).document(itemId)
         val itemDoc = itemDocRef.get().await()
         if (itemDoc.exists()) {
             val stokTersediaSaatIni = (itemDoc.getLong("stokTersedia") ?: 1L).toInt()
@@ -146,8 +139,11 @@ class RentalRepository(
     }
 
     suspend fun tandaiDikembalikan(rental: Rental): Result<Unit> = runCatching {
+        val uid = currentUid
+        require(uid.isNotEmpty() && isEmailVerified) { "Pengguna belum login atau email belum diverifikasi" }
+
         val now = System.currentTimeMillis()
-        getRentalsCollection().document(rental.id).update(
+        getRentalsCollection(uid).document(rental.id).update(
             mapOf(
                 "status" to "selesai",
                 "dikembalikanPada" to now
@@ -155,7 +151,7 @@ class RentalRepository(
         ).await()
 
         if (rental.itemId.isNotEmpty()) {
-            val itemDocRef = getItemsCollection().document(rental.itemId)
+            val itemDocRef = getItemsCollection(uid).document(rental.itemId)
             val itemDoc = itemDocRef.get().await()
             if (itemDoc.exists()) {
                 val stokTotal = (itemDoc.getLong("stok") ?: 1L).toInt()
@@ -173,6 +169,9 @@ class RentalRepository(
     }
 
     suspend fun updateSewa(rental: Rental): Result<Unit> = runCatching {
+        val uid = currentUid
+        require(uid.isNotEmpty() && isEmailVerified) { "Pengguna belum login atau email belum diverifikasi" }
+
         val noWaNorm = normalizeNoWa(rental.noWa)
         if (rental.namaPenyewa.isNotEmpty()) {
             customerRepository.upsertCustomer(rental.namaPenyewa, rental.noWa)
@@ -194,13 +193,16 @@ class RentalRepository(
             "pelunasanPada" to rental.pelunasanPada,
             "jumlahPelunasan" to rental.jumlahPelunasan
         )
-        getRentalsCollection().document(rental.id).update(map).await()
+        getRentalsCollection(uid).document(rental.id).update(map).await()
     }
 
     suspend fun hapusSewa(rental: Rental): Result<Unit> = runCatching {
-        getRentalsCollection().document(rental.id).delete().await()
+        val uid = currentUid
+        require(uid.isNotEmpty() && isEmailVerified) { "Pengguna belum login atau email belum diverifikasi" }
+
+        getRentalsCollection(uid).document(rental.id).delete().await()
         if (rental.itemId.isNotEmpty() && rental.status == "berjalan") {
-            val itemDocRef = getItemsCollection().document(rental.itemId)
+            val itemDocRef = getItemsCollection(uid).document(rental.itemId)
             val itemDoc = itemDocRef.get().await()
             if (itemDoc.exists()) {
                 val stokTotal = (itemDoc.getLong("stok") ?: 1L).toInt()
