@@ -242,7 +242,7 @@ fun NotaTransaksiDialog(
 
                     ReceiptDivider()
 
-                    // Rincian Layanan / Barang
+                    // Rincian Layanan / Barang (Multi-Item)
                     Row(modifier = Modifier.fillMaxWidth()) {
                         Text(
                             text = "LAYANAN SEWA:",
@@ -255,30 +255,33 @@ fun NotaTransaksiDialog(
 
                     Spacer(modifier = Modifier.height(4.dp))
 
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(
-                            text = "1. ${rental.namaBarang}",
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = FontFamily.Monospace,
-                            color = Color.Black
-                        )
-                    }
-                    val unitHarga = if (rental.jumlah > 0 && rental.lamaHari > 0) rental.hargaTotal / (rental.jumlah * rental.lamaHari) else rental.hargaTotal
-                    Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                        Text(
-                            text = "   ${rental.jumlah} unit x ${formatRupiah(unitHarga)} x ${rental.lamaHari} hr",
-                            fontSize = 12.sp,
-                            fontFamily = FontFamily.Monospace,
-                            color = Color.Black
-                        )
-                        Text(
-                            text = formatRupiah(rental.hargaTotal),
-                            fontSize = 13.sp,
-                            fontWeight = FontWeight.Bold,
-                            fontFamily = FontFamily.Monospace,
-                            color = Color.Black
-                        )
+                    rental.getItemsList().forEachIndexed { idx, rItem ->
+                        val subtotalItem = rItem.hargaSatuan * rItem.jumlah.toLong() * rental.lamaHari.toLong()
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text(
+                                text = "${idx + 1}. ${rItem.nama}",
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = FontFamily.Monospace,
+                                color = Color.Black
+                            )
+                        }
+                        Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                            Text(
+                                text = "   ${rItem.jumlah} unit x ${formatRupiah(rItem.hargaSatuan)} x ${rental.lamaHari} hr",
+                                fontSize = 12.sp,
+                                fontFamily = FontFamily.Monospace,
+                                color = Color.Black
+                            )
+                            Text(
+                                text = formatRupiah(subtotalItem),
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                fontFamily = FontFamily.Monospace,
+                                color = Color.Black
+                            )
+                        }
+                        Spacer(modifier = Modifier.height(4.dp))
                     }
 
                     ReceiptDivider()
@@ -437,7 +440,6 @@ fun cetakStrukProfesional(
     fotoBase64: String
 ) {
     try {
-        val unitHarga = if (rental.jumlah > 0 && rental.lamaHari > 0) rental.hargaTotal / (rental.jumlah * rental.lamaHari) else rental.hargaTotal
         val statusStr = if (rental.sisaBayar == 0L) "LUNAS" else "BELUM LUNAS"
         val displayMetode = if (rental.dp == 0L && rental.jumlahPelunasan == 0L) "-" else rental.metodePembayaran.ifEmpty { "-" }
 
@@ -474,11 +476,18 @@ fun cetakStrukProfesional(
                 <div>Lama Sewa &nbsp;: ${rental.lamaHari} Hari</div>
                 <div class="divider"></div>
                 <div class="bold">LAYANAN SEWA:</div>
-                <div class="bold">1. ${rental.namaBarang}</div>
-                <div class="flex">
-                    <span>&nbsp;&nbsp;&nbsp;${rental.jumlah} unit x ${formatRupiah(unitHarga)} x ${rental.lamaHari} hr</span>
-                    <span class="bold">${formatRupiah(rental.hargaTotal)}</span>
-                </div>
+                ${
+                    rental.getItemsList().mapIndexed { idx, rItem ->
+                        val subtotalItem = rItem.hargaSatuan * rItem.jumlah.toLong() * rental.lamaHari.toLong()
+                        """
+                        <div class="bold">${idx + 1}. ${rItem.nama}</div>
+                        <div class="flex">
+                            <span>&nbsp;&nbsp;&nbsp;${rItem.jumlah} unit x ${formatRupiah(rItem.hargaSatuan)} x ${rental.lamaHari} hr</span>
+                            <span class="bold">${formatRupiah(subtotalItem)}</span>
+                        </div>
+                        """.trimIndent()
+                    }.joinToString("<div style='height: 4px;'></div>")
+                }
                 <div class="divider"></div>
                 <div class="flex">
                     <span>Total Biaya</span>

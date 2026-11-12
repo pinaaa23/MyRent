@@ -85,9 +85,27 @@ class ItemRepository(
         getItemCollection(uid).add(map).await()
     }
 
+    /**
+     * Memperbarui item katalog dengan kalkulasi stokTersedia yang presisi:
+     * (stokBaru - sedangDisewa) sehingga stok barang yang sedang disewa tidak hilang.
+     */
     suspend fun updateItem(item: Item): Result<Unit> = runCatching {
         val uid = currentUid
         require(uid.isNotEmpty() && isEmailVerified) { "Pengguna belum login atau email belum diverifikasi" }
+
+        val docRef = getItemCollection(uid).document(item.id)
+        val snapshot = docRef.get().await()
+
+        val newStokTersedia = if (snapshot.exists()) {
+            val oldStok = (snapshot.getLong("stok") ?: item.stok.toLong()).toInt()
+            val oldStokTersedia = (snapshot.getLong("stokTersedia") ?: oldStok.toLong()).toInt()
+            val currentlyRented = (oldStok - oldStokTersedia).coerceAtLeast(0)
+            (item.stok - currentlyRented).coerceIn(0, item.stok)
+        } else {
+            item.stokTersedia
+        }
+
+        val statusBaru = if (newStokTersedia == 0) "disewa" else item.status
 
         val map = mapOf(
             "nama" to item.nama,
@@ -95,12 +113,12 @@ class ItemRepository(
             "ukuran" to item.ukuran,
             "hargaSewa" to item.hargaSewa,
             "stok" to item.stok,
-            "stokTersedia" to item.stokTersedia,
+            "stokTersedia" to newStokTersedia,
             "fotoBase64" to item.fotoBase64,
-            "status" to item.status,
+            "status" to statusBaru,
             "catatan" to item.catatan
         )
-        getItemCollection(uid).document(item.id).update(map).await()
+        docRef.update(map).await()
     }
 
     suspend fun hapusItem(id: String): Result<Unit> = runCatching {

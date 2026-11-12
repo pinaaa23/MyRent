@@ -59,7 +59,7 @@ import com.myrent.app.ui.theme.TextPrimary
 import com.myrent.app.ui.theme.TextSecondary
 
 /**
- * Bottom Sheet Detail Transaksi Sewa & Fitur Pelunasan Pembayaran (QRIS / Tunai)
+ * Bottom Sheet Detail Transaksi Sewa & Fitur Pelunasan Pembayaran
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -98,13 +98,13 @@ fun DetailSewaBottomSheet(
         return
     }
 
-    // 2. Tampilkan Layar Full-Screen Pembayaran Pelunasan (Tunai vs QRIS)
+    // 2. Tampilkan Layar Full-Screen Pembayaran Pelunasan
     if (showPelunasanScreen) {
         PembayaranScreen(
             totalBayar = rental.sisaBayar,
             namaPenyewa = rental.namaPenyewa,
-            namaBarang = rental.namaBarang,
-            jumlahUnit = rental.jumlah,
+            namaBarang = rental.getNamaDisplay(),
+            jumlahUnit = rental.getTotalUnitCount(),
             cabangNama = userDoc.namaToko.ifEmpty { "MYRENT STORE" },
             onBack = { showPelunasanScreen = false },
             onKonfirmasiPembayaran = { metode ->
@@ -137,15 +137,20 @@ fun DetailSewaBottomSheet(
             ) {
                 Column(modifier = Modifier.weight(1f)) {
                     Text(
-                        text = rental.namaBarang,
+                        text = rental.getNamaDisplay(),
                         fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary
                     )
                     Spacer(modifier = Modifier.height(2.dp))
                     Text(
-                        text = "${rental.namaPenyewa} (${rental.noWa})",
-                        fontSize = 14.sp,
+                        text = buildString {
+                            append("${rental.namaPenyewa} (${rental.noWa})")
+                            if (rental.medsosPenyewa.isNotEmpty()) {
+                                append(" • ${rental.medsosPenyewa}")
+                            }
+                        },
+                        fontSize = 13.sp,
                         color = TextSecondary
                     )
                 }
@@ -174,13 +179,43 @@ fun DetailSewaBottomSheet(
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Card Detail Rincian Biaya
+            // Card Detail Rincian Biaya & Barang
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 shape = RoundedCornerShape(10.dp),
                 colors = CardDefaults.cardColors(containerColor = DarkSurfaceVariant)
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
+                    Text(
+                        text = "Rincian Barang (${rental.getItemsList().size}):",
+                        fontSize = 13.sp,
+                        fontWeight = FontWeight.Bold,
+                        color = TextPrimary
+                    )
+                    Spacer(modifier = Modifier.height(4.dp))
+                    rental.getItemsList().forEachIndexed { idx, rItem ->
+                        Row(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .padding(vertical = 2.dp),
+                            horizontalArrangement = Arrangement.SpaceBetween
+                        ) {
+                            Text(
+                                text = "${idx + 1}. ${rItem.nama} (${rItem.jumlah} unit)",
+                                fontSize = 13.sp,
+                                color = TextPrimary
+                            )
+                            Text(
+                                text = formatRupiah(rItem.hargaSatuan * rItem.jumlah.toLong() * rental.lamaHari.toLong()),
+                                fontSize = 13.sp,
+                                fontWeight = FontWeight.Bold,
+                                color = AccentGold
+                            )
+                        }
+                    }
+
+                    Spacer(modifier = Modifier.height(12.dp))
+
                     DetailRow(label = "Periode Sewa", value = "${formatDate(rental.tanggalMulai)} - ${formatDate(rental.tanggalKembali)} (${rental.lamaHari} Hari)")
                     Spacer(modifier = Modifier.height(8.dp))
                     DetailRow(label = "Total Biaya", value = formatRupiah(rental.hargaTotal))
@@ -192,6 +227,10 @@ fun DetailSewaBottomSheet(
                         value = if (rental.sisaBayar == 0L) stringResource(R.string.status_paid) else formatRupiah(rental.sisaBayar),
                         valueColor = if (rental.sisaBayar == 0L) Color(0xFF6BCB77) else Color(0xFFFF6B6B)
                     )
+                    if (rental.medsosPenyewa.isNotEmpty()) {
+                        Spacer(modifier = Modifier.height(8.dp))
+                        DetailRow(label = "Media Sosial", value = rental.medsosPenyewa)
+                    }
                     if (rental.catatan.isNotEmpty()) {
                         Spacer(modifier = Modifier.height(8.dp))
                         DetailRow(label = "Catatan / Jaminan", value = rental.catatan)
@@ -201,7 +240,7 @@ fun DetailSewaBottomSheet(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // FITUR PELUNASAN PEMBAYARAN (Aktif jika sisaBayar > 0, Mati jika Lunas)
+            // FITUR PELUNASAN PEMBAYARAN
             if (rental.sisaBayar > 0L) {
                 Button(
                     onClick = { showPelunasanScreen = true },
@@ -318,7 +357,7 @@ fun DetailSewaBottomSheet(
         AlertDialog(
             onDismissRequest = { showReturnConfirmDialog = false },
             title = { Text(stringResource(R.string.confirm_return_title), color = TextPrimary, fontWeight = FontWeight.Bold) },
-            text = { Text(stringResource(R.string.confirm_return_msg, rental.namaBarang), color = TextSecondary) },
+            text = { Text(stringResource(R.string.confirm_return_msg, rental.getNamaDisplay()), color = TextSecondary) },
             confirmButton = {
                 TextButton(onClick = {
                     showReturnConfirmDialog = false

@@ -179,7 +179,7 @@ class HomeViewModel(
             val pesan = TemplateReplacer.replaceVariables(
                 template = rawTemplate,
                 nama = rental.namaPenyewa,
-                barang = "${rental.namaBarang} (${rental.jumlah} unit)",
+                barang = rental.getSummaryBarangWA(),
                 tanggal = tglStr,
                 total = formatRupiah(rental.hargaTotal),
                 dp = formatRupiah(rental.dp),

@@ -361,7 +361,7 @@ fun FollowUpCard(
                     Spacer(modifier = Modifier.width(8.dp))
 
                     Text(
-                        text = rental.namaBarang,
+                        text = rental.getNamaDisplay(),
                         fontSize = 15.sp,
                         fontWeight = FontWeight.Bold,
                         color = TextPrimary

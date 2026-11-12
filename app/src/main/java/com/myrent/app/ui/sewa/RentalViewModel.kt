@@ -13,6 +13,7 @@ import com.myrent.app.data.items.Item
 import com.myrent.app.data.items.ItemRepository
 import com.myrent.app.data.rentals.PaymentRecord
 import com.myrent.app.data.rentals.Rental
+import com.myrent.app.data.rentals.RentalItem
 import com.myrent.app.data.rentals.RentalRepository
 import com.myrent.app.data.rentals.mapJenisMetode
 import com.myrent.app.data.settings.DefaultStoreConfig
@@ -36,6 +37,17 @@ import java.util.Calendar
 import java.util.Date
 import java.util.Locale
 
+data class RentalDraftForm(
+    val namaPenyewa: String = "",
+    val noWa: String = "",
+    val medsosPenyewa: String = "",
+    val tglMulaiMs: Long = System.currentTimeMillis(),
+    val tglKembaliMs: Long = System.currentTimeMillis() + 86400000L,
+    val dpText: String = "",
+    val catatan: String = "",
+    val selectedItems: List<Item> = emptyList()
+)
+
 sealed class RentalUiState {
     object Idle : RentalUiState()
     object Loading : RentalUiState()
@@ -57,6 +69,35 @@ class RentalViewModel(
 
     private val _uiState = MutableStateFlow<RentalUiState>(RentalUiState.Idle)
     val uiState: StateFlow<RentalUiState> = _uiState.asStateFlow()
+
+    private val _draftForm = MutableStateFlow(RentalDraftForm())
+    val draftForm: StateFlow<RentalDraftForm> = _draftForm.asStateFlow()
+
+    fun updateDraftForm(
+        namaPenyewa: String = _draftForm.value.namaPenyewa,
+        noWa: String = _draftForm.value.noWa,
+        medsosPenyewa: String = _draftForm.value.medsosPenyewa,
+        tglMulaiMs: Long = _draftForm.value.tglMulaiMs,
+        tglKembaliMs: Long = _draftForm.value.tglKembaliMs,
+        dpText: String = _draftForm.value.dpText,
+        catatan: String = _draftForm.value.catatan,
+        selectedItems: List<Item> = _draftForm.value.selectedItems
+    ) {
+        _draftForm.value = RentalDraftForm(
+            namaPenyewa = namaPenyewa,
+            noWa = noWa,
+            medsosPenyewa = medsosPenyewa,
+            tglMulaiMs = tglMulaiMs,
+            tglKembaliMs = tglKembaliMs,
+            dpText = dpText,
+            catatan = catatan,
+            selectedItems = selectedItems
+        )
+    }
+
+    fun clearDraftForm() {
+        _draftForm.value = RentalDraftForm()
+    }
 
     private val _searchQuery = MutableStateFlow("")
     val searchQuery: StateFlow<String> = _searchQuery.asStateFlow()
@@ -124,6 +165,7 @@ class RentalViewModel(
         selectedItem: Item?,
         namaPenyewa: String,
         noWa: String,
+        medsosPenyewa: String = "",
         tanggalMulai: Long,
         tanggalKembali: Long,
         lamaHari: Int,
@@ -132,9 +174,10 @@ class RentalViewModel(
         dp: Long,
         metodePembayaran: String,
         catatan: String,
+        rentedItems: List<RentalItem> = emptyList(),
         onSuccess: (Rental) -> Unit
     ) {
-        if (selectedItem == null) {
+        if (selectedItem == null && rentedItems.isEmpty()) {
             _uiState.value = RentalUiState.Error("Silakan pilih barang terlebih dahulu.")
             return
         }
@@ -144,6 +187,10 @@ class RentalViewModel(
         }
         if (noWa.trim().isEmpty()) {
             _uiState.value = RentalUiState.Error("Nomor WA penyewa wajib diisi.")
+            return
+        }
+        if (medsosPenyewa.trim().isEmpty()) {
+            _uiState.value = RentalUiState.Error("Media sosial konsumen (IG/TikTok/FB) wajib diisi.")
             return
         }
         if (dp < 0L) {
@@ -165,12 +212,31 @@ class RentalViewModel(
             val sdfId = SimpleDateFormat("yyyyMMdd-HHmmss", Locale.getDefault())
             val invoiceId = "INV-${sdfId.format(Date(now))}"
 
+            val finalItemList = if (rentedItems.isNotEmpty()) {
+                rentedItems
+            } else if (selectedItem != null) {
+                listOf(
+                    RentalItem(
+                        itemId = selectedItem.id,
+                        nama = selectedItem.nama,
+                        kategori = selectedItem.kategori,
+                        hargaSatuan = selectedItem.hargaSewa,
+                        jumlah = jumlah,
+                        fotoBase64 = selectedItem.fotoBase64
+                    )
+                )
+            } else emptyList()
+
+            val primaryItem = finalItemList.firstOrNull()
+            val firstItemId = primaryItem?.itemId ?: (selectedItem?.id ?: "")
+
             val rentalToCreate = Rental(
                 cabangId = "",
-                itemId = selectedItem.id,
-                namaBarang = selectedItem.nama,
+                itemId = firstItemId,
+                namaBarang = primaryItem?.nama ?: (selectedItem?.nama ?: "Barang Sewa"),
                 namaPenyewa = namaPenyewa.trim(),
                 noWa = noWa.trim(),
+                medsosPenyewa = medsosPenyewa.trim(),
                 tanggalMulai = tanggalMulai,
                 tanggalKembali = tanggalKembali,
                 lamaHari = lamaHari,
@@ -184,15 +250,16 @@ class RentalViewModel(
                 dibuatPada = now,
                 catatan = catatan.trim(),
                 invoiceId = invoiceId,
-                metodePembayaran = metodePembayaran
+                metodePembayaran = metodePembayaran,
+                items = finalItemList
             )
 
-            val result = rentalRepository.tambahSewa(rentalToCreate, selectedItem.id)
+            val result = rentalRepository.tambahSewa(rentalToCreate, firstItemId)
             result.onSuccess { savedRental ->
                 _uiState.value = RentalUiState.Idle
                 onSuccess(savedRental)
-            }.onFailure {
-                _uiState.value = RentalUiState.Error("Gagal menyimpan transaksi sewa.")
+            }.onFailure { e ->
+                _uiState.value = RentalUiState.Error(e.message ?: "Gagal menyimpan transaksi sewa.")
             }
         }
     }
@@ -265,6 +332,7 @@ class RentalViewModel(
         rental: Rental,
         namaPenyewa: String,
         noWa: String,
+        medsosPenyewa: String = "",
         tanggalMulai: Long,
         tanggalKembali: Long,
         lamaHari: Int,
@@ -275,6 +343,14 @@ class RentalViewModel(
         catatan: String,
         onSuccess: () -> Unit
     ) {
+        if (namaPenyewa.trim().isEmpty() || noWa.trim().isEmpty()) {
+            _uiState.value = RentalUiState.Error("Nama dan Nomor WA penyewa wajib diisi.")
+            return
+        }
+        if (medsosPenyewa.trim().isEmpty()) {
+            _uiState.value = RentalUiState.Error("Media sosial konsumen (IG/TikTok/FB) wajib diisi.")
+            return
+        }
         if (dp < 0L) {
             _uiState.value = RentalUiState.Error("Uang muka / DP tidak boleh negatif.")
             return
@@ -292,6 +368,7 @@ class RentalViewModel(
             val updated = rental.copy(
                 namaPenyewa = namaPenyewa.trim(),
                 noWa = noWa.trim(),
+                medsosPenyewa = medsosPenyewa.trim(),
                 tanggalMulai = tanggalMulai,
                 tanggalKembali = tanggalKembali,
                 lamaHari = lamaHari,
@@ -372,7 +449,7 @@ class RentalViewModel(
             val pesan = TemplateReplacer.replaceVariables(
                 template = template,
                 nama = rental.namaPenyewa,
-                barang = "${rental.namaBarang} (${rental.jumlah} unit)",
+                barang = rental.getSummaryBarangWA(),
                 tanggal = "$tglMulai s/d $tglKembali (${rental.lamaHari} Hari)",
                 total = formatRupiah(rental.hargaTotal),
                 dp = formatRupiah(rental.dp),

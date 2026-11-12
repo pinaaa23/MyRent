@@ -1,14 +1,20 @@
 package com.myrent.app.ui.report
 
+import android.content.Context
+import android.widget.Toast
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.myrent.app.data.auth.AuthRepository
+import com.myrent.app.data.auth.UserDoc
 import com.myrent.app.data.items.Item
 import com.myrent.app.data.items.ItemRepository
 import com.myrent.app.data.rentals.Rental
 import com.myrent.app.data.rentals.RentalRepository
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 data class TopItemStat(
@@ -45,15 +51,19 @@ data class ReportUiState(
 )
 
 /**
- * ViewModel pengelola Data Laporan Omzet Realtime dengan Filter Metode (Tunai / Non-Tunai)
+ * ViewModel pengelola Data Laporan Omzet Realtime dengan Filter Metode & Export Periode (Harian/Bulanan/Tahunan)
  */
 class ReportViewModel(
     private val rentalRepository: RentalRepository = RentalRepository(),
-    private val itemRepository: ItemRepository = ItemRepository()
+    private val itemRepository: ItemRepository = ItemRepository(),
+    private val authRepository: AuthRepository = AuthRepository()
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(ReportUiState(isLoading = true))
     val uiState: StateFlow<ReportUiState> = _uiState.asStateFlow()
+
+    val userDocState: StateFlow<UserDoc> = authRepository.getUserProfileFlow()
+        .stateIn(viewModelScope, SharingStarted.Lazily, UserDoc())
 
     private var allRawRentals: List<Rental> = emptyList()
     private var cachedItems: List<Item> = emptyList()
@@ -107,12 +117,10 @@ class ReportViewModel(
 
         val rentalsInPeriod = allRawRentals.filter { it.dibuatPada in range.startMs..range.endMs }
 
-        // Omzet Kotor: Total biaya sewa transaksi baru dalam periode
         val omzetKotor = rentalsInPeriod.sumOf { it.hargaTotal }
         val belumDibayar = rentalsInPeriod.sumOf { it.sisaBayar }
         val totalTransaksi = rentalsInPeriod.size
 
-        // Hitung Diterima dari catatan pembayaran berdasarkan TANGGAL UANG MASUK riil
         val allPaymentsInPeriod = allRawRentals.flatMap { it.getAllPaymentRecords() }
             .filter { it.tanggal in range.startMs..range.endMs }
 
@@ -139,7 +147,8 @@ class ReportViewModel(
         }
 
         val topItems = rentalsInPeriod
-            .groupBy { it.namaBarang }
+            .flatMap { it.getItemsList() }
+            .groupBy { it.nama }
             .map { (nama, list) ->
                 TopItemStat(
                     namaBarang = nama,
@@ -150,13 +159,29 @@ class ReportViewModel(
             .take(5)
 
         val itemCategoryMap = cachedItems.associate { it.id to it.kategori }
-        val categoryStats = rentalsInPeriod
-            .groupBy { rental ->
-                val kat = itemCategoryMap[rental.itemId]
-                if (!kat.isNullOrEmpty()) kat else "Tanpa kategori"
+        val categoryTotalMap = mutableMapOf<String, Long>()
+
+        rentalsInPeriod.forEach { rental ->
+            val itemsList = rental.getItemsList()
+            val itemSubtotals = itemsList.map { rItem ->
+                val katFromItem = itemCategoryMap[rItem.itemId]
+                val kat = if (!katFromItem.isNullOrEmpty()) katFromItem else rItem.kategori.ifEmpty { "Tanpa kategori" }
+                val subtotal = rItem.hargaSatuan * rItem.jumlah.toLong()
+                kat to subtotal
             }
-            .map { (kat, list) ->
-                val catTotal = list.sumOf { it.hargaTotal }
+            val calculatedTotal = itemSubtotals.sumOf { it.second }
+            itemSubtotals.forEach { (kat, subtotal) ->
+                val portion = if (calculatedTotal > 0L) {
+                    (subtotal.toDouble() / calculatedTotal.toDouble() * rental.hargaTotal.toDouble()).toLong()
+                } else {
+                    0L
+                }
+                categoryTotalMap[kat] = (categoryTotalMap[kat] ?: 0L) + portion
+            }
+        }
+
+        val categoryStats = categoryTotalMap
+            .map { (kat, catTotal) ->
                 val prop = if (omzetKotor > 0) catTotal.toFloat() / omzetKotor.toFloat() else 0f
                 CategoryStat(
                     namaKategori = kat,
@@ -184,6 +209,46 @@ class ReportViewModel(
             categoryStats = categoryStats,
             recentRentals = recent10,
             allRentalsInPeriod = rentalsInPeriod.sortedByDescending { it.dibuatPada }
+        )
+    }
+
+    /**
+     * Mengekspor laporan periode spesifik (Harian, Bulanan, atau Tahunan) ke folder Download
+     */
+    fun exportReportForPeriod(context: Context, periodType: PeriodType) {
+        val storeName = userDocState.value.namaToko.ifEmpty { "MYRENT STORE" }
+        val range = ReportPeriodHelper.calculatePeriodRange(periodType, 0)
+
+        val rentalsInPeriod = allRawRentals.filter { it.dibuatPada in range.startMs..range.endMs }
+
+        if (rentalsInPeriod.isEmpty()) {
+            Toast.makeText(context, "Tidak ada data transaksi pada periode ${range.displayText} untuk diexport.", Toast.LENGTH_SHORT).show()
+            return
+        }
+
+        val omzetKotor = rentalsInPeriod.sumOf { it.hargaTotal }
+        val belumDibayar = rentalsInPeriod.sumOf { it.sisaBayar }
+        val totalTransaksi = rentalsInPeriod.size
+
+        val allPaymentsInPeriod = allRawRentals.flatMap { it.getAllPaymentRecords() }
+            .filter { it.tanggal in range.startMs..range.endMs }
+
+        val diterimaTunai = allPaymentsInPeriod.filter { it.jenisMetode == "TUNAI" }.sumOf { it.jumlah }
+        val diterimaNonTunai = allPaymentsInPeriod.filter { it.jenisMetode == "NON_TUNAI" }.sumOf { it.jumlah }
+        val totalDiterima = allPaymentsInPeriod.sumOf { it.jumlah }
+
+        ReportExporter.generateAndSaveToDownloads(
+            context = context,
+            namaToko = storeName,
+            periodType = periodType,
+            periodRangeText = range.displayText,
+            omzetKotor = omzetKotor,
+            totalTransaksi = totalTransaksi,
+            sudahDiterima = totalDiterima,
+            sudahDiterimaTunai = diterimaTunai,
+            sudahDiterimaNonTunai = diterimaNonTunai,
+            belumDibayar = belumDibayar,
+            rentals = rentalsInPeriod.sortedByDescending { it.dibuatPada }
         )
     }
 

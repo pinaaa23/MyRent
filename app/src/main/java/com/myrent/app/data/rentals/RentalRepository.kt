@@ -10,7 +10,7 @@ import kotlinx.coroutines.flow.callbackFlow
 import kotlinx.coroutines.tasks.await
 
 /**
- * Repository pengelola koleksi "rentals" terisolasi per akun toko (toko/{uid}/rentals)
+ * Repository pengelola koleksi "rentals" terisolasi per akun toko (toko/{uid}/rentals) dengan Dukungan Atomic Multi-Item Stock
  */
 class RentalRepository(
     private val auth: FirebaseAuth = FirebaseAuth.getInstance(),
@@ -47,6 +47,19 @@ class RentalRepository(
             val list = snapshot?.documents?.mapNotNull { doc ->
                 try {
                     @Suppress("UNCHECKED_CAST")
+                    val rawItems = doc.get("items") as? List<Map<String, Any>>
+                    val itemsList = rawItems?.mapNotNull { iMap ->
+                        RentalItem(
+                            itemId = iMap["itemId"] as? String ?: "",
+                            nama = iMap["nama"] as? String ?: "",
+                            kategori = iMap["kategori"] as? String ?: "",
+                            hargaSatuan = (iMap["hargaSatuan"] as? Number)?.toLong() ?: 0L,
+                            jumlah = (iMap["jumlah"] as? Number)?.toInt() ?: 1,
+                            fotoBase64 = iMap["fotoBase64"] as? String ?: ""
+                        )
+                    } ?: emptyList()
+
+                    @Suppress("UNCHECKED_CAST")
                     val rawPayments = doc.get("payments") as? List<Map<String, Any>>
                     val paymentsList = rawPayments?.mapNotNull { pMap ->
                         val metRaw = pMap["metode"] as? String ?: ""
@@ -70,6 +83,7 @@ class RentalRepository(
                         customerId = doc.getString("customerId") ?: "",
                         namaPenyewa = doc.getString("namaPenyewa") ?: "",
                         noWa = doc.getString("noWa") ?: "",
+                        medsosPenyewa = doc.getString("medsosPenyewa") ?: "",
                         tanggalMulai = doc.getLong("tanggalMulai") ?: System.currentTimeMillis(),
                         tanggalKembali = doc.getLong("tanggalKembali") ?: System.currentTimeMillis(),
                         lamaHari = (doc.getLong("lamaHari") ?: 1L).toInt(),
@@ -89,6 +103,7 @@ class RentalRepository(
                         metodePembayaran = doc.getString("metodePembayaran") ?: "",
                         pelunasanPada = doc.getLong("pelunasanPada"),
                         jumlahPelunasan = doc.getLong("jumlahPelunasan") ?: 0L,
+                        items = itemsList,
                         payments = paymentsList
                     )
                 } catch (e: Exception) {
@@ -101,7 +116,10 @@ class RentalRepository(
         awaitClose { listener.remove() }
     }
 
-    suspend fun tambahSewa(rental: Rental, itemId: String): Result<Rental> = runCatching {
+    /**
+     * Menyimpan transaksi sewa baru (Multi-Item) dan mengurangi stok semua barang secara atomic
+     */
+    suspend fun tambahSewa(rental: Rental, singleItemId: String = ""): Result<Rental> = runCatching {
         val uid = currentUid
         require(uid.isNotEmpty() && isEmailVerified) { "Pengguna belum login atau email belum diverifikasi" }
 
@@ -111,6 +129,11 @@ class RentalRepository(
             noWaRaw = rental.noWa
         )
         val customerId = customerRes.getOrNull()?.id ?: noWaNorm
+
+        val itemList = rental.getItemsList()
+        require(itemList.isNotEmpty()) { "Daftar barang yang disewa tidak boleh kosong." }
+
+        val itemsCollectionRef = getItemsCollection(uid)
 
         val initialPayments = mutableListOf<PaymentRecord>()
         if (rental.dp > 0L) {
@@ -128,6 +151,17 @@ class RentalRepository(
             )
         }
 
+        val itemsMapList = itemList.map {
+            mapOf(
+                "itemId" to it.itemId,
+                "nama" to it.nama,
+                "kategori" to it.kategori,
+                "hargaSatuan" to it.hargaSatuan,
+                "jumlah" to it.jumlah,
+                "fotoBase64" to it.fotoBase64
+            )
+        }
+
         val paymentsMapList = initialPayments.map {
             mapOf(
                 "id" to it.id,
@@ -140,17 +174,21 @@ class RentalRepository(
             )
         }
 
+        val primaryItem = itemList.first()
+        val firstItemId = primaryItem.itemId.ifEmpty { singleItemId }
+
         val map = mapOf(
             "cabangId" to rental.cabangId,
-            "itemId" to itemId,
-            "namaBarang" to rental.namaBarang,
+            "itemId" to firstItemId,
+            "namaBarang" to rental.getNamaDisplay(),
             "customerId" to customerId,
             "namaPenyewa" to rental.namaPenyewa.trim(),
             "noWa" to noWaNorm,
+            "medsosPenyewa" to rental.medsosPenyewa.trim(),
             "tanggalMulai" to rental.tanggalMulai,
             "tanggalKembali" to rental.tanggalKembali,
             "lamaHari" to rental.lamaHari,
-            "jumlah" to rental.jumlah,
+            "jumlah" to rental.getTotalUnitCount(),
             "hargaTotal" to rental.hargaTotal,
             "dp" to rental.dp,
             "sisaBayar" to rental.sisaBayar,
@@ -165,30 +203,41 @@ class RentalRepository(
             "metodePembayaran" to rental.metodePembayaran,
             "pelunasanPada" to rental.pelunasanPada,
             "jumlahPelunasan" to rental.jumlahPelunasan,
+            "items" to itemsMapList,
             "payments" to paymentsMapList
         )
 
-        val docRef = getRentalsCollection(uid).add(map).await()
+        // Lakukan verifikasi stok & pengurangan stok atomic
+        for (rItem in itemList) {
+            if (rItem.itemId.isNotEmpty()) {
+                val itemDocRef = itemsCollectionRef.document(rItem.itemId)
+                val itemDoc = itemDocRef.get().await()
+                if (itemDoc.exists()) {
+                    val stokTersediaSaatIni = (itemDoc.getLong("stokTersedia") ?: 1L).toInt()
+                    if (stokTersediaSaatIni < rItem.jumlah) {
+                        error("Stok barang \"${rItem.nama}\" tidak mencukupi (tersisa $stokTersediaSaatIni, dibutuhkan ${rItem.jumlah}).")
+                    }
+                    val stokTersediaBaru = (stokTersediaSaatIni - rItem.jumlah).coerceAtLeast(0)
+                    val statusBaru = if (stokTersediaBaru == 0) "disewa" else "tersedia"
 
-        val itemDocRef = getItemsCollection(uid).document(itemId)
-        val itemDoc = itemDocRef.get().await()
-        if (itemDoc.exists()) {
-            val stokTersediaSaatIni = (itemDoc.getLong("stokTersedia") ?: 1L).toInt()
-            val stokTersediaBaru = (stokTersediaSaatIni - rental.jumlah).coerceAtLeast(0)
-            val statusBaru = if (stokTersediaBaru == 0) "disewa" else "tersedia"
-
-            itemDocRef.update(
-                mapOf(
-                    "stokTersedia" to stokTersediaBaru,
-                    "status" to statusBaru
-                )
-            ).await()
+                    itemDocRef.update(
+                        mapOf(
+                            "stokTersedia" to stokTersediaBaru,
+                            "status" to statusBaru
+                        )
+                    ).await()
+                }
+            }
         }
+
+        val docRef = getRentalsCollection(uid).add(map).await()
 
         rental.copy(
             id = docRef.id,
             customerId = customerId,
             noWa = noWaNorm,
+            itemId = firstItemId,
+            namaBarang = rental.getNamaDisplay(),
             payments = initialPayments.map { it.copy(rentalId = docRef.id) }
         )
     }
@@ -202,7 +251,6 @@ class RentalRepository(
             customerRepository.upsertCustomer(rental.namaPenyewa, rental.noWa)
         }
 
-        // Perbarui catatan DP jika DP berubah pada mode edit sewa
         val currentPayments = rental.getAllPaymentRecords().toMutableList()
         val dpIndex = currentPayments.indexOfFirst { it.jenis == "DP" }
         if (dpIndex >= 0) {
@@ -226,6 +274,18 @@ class RentalRepository(
             )
         }
 
+        val itemList = rental.getItemsList()
+        val itemsMapList = itemList.map {
+            mapOf(
+                "itemId" to it.itemId,
+                "nama" to it.nama,
+                "kategori" to it.kategori,
+                "hargaSatuan" to it.hargaSatuan,
+                "jumlah" to it.jumlah,
+                "fotoBase64" to it.fotoBase64
+            )
+        }
+
         val paymentsMapList = currentPayments.map {
             mapOf(
                 "id" to it.id,
@@ -241,10 +301,11 @@ class RentalRepository(
         val map = mapOf(
             "namaPenyewa" to rental.namaPenyewa.trim(),
             "noWa" to noWaNorm,
+            "medsosPenyewa" to rental.medsosPenyewa.trim(),
             "tanggalMulai" to rental.tanggalMulai,
             "tanggalKembali" to rental.tanggalKembali,
             "lamaHari" to rental.lamaHari,
-            "jumlah" to rental.jumlah,
+            "jumlah" to rental.getTotalUnitCount(),
             "hargaTotal" to rental.hargaTotal,
             "dp" to rental.dp,
             "sisaBayar" to rental.sisaBayar,
@@ -254,11 +315,15 @@ class RentalRepository(
             "metodePembayaran" to rental.metodePembayaran,
             "pelunasanPada" to rental.pelunasanPada,
             "jumlahPelunasan" to rental.jumlahPelunasan,
+            "items" to itemsMapList,
             "payments" to paymentsMapList
         )
         getRentalsCollection(uid).document(rental.id).update(map).await()
     }
 
+    /**
+     * Tandai sewa dikembalikan: Mengembalikan stok SEMUA barang yang ada di dalam transaksi ini
+     */
     suspend fun tandaiDikembalikan(rental: Rental): Result<Unit> = runCatching {
         val uid = currentUid
         require(uid.isNotEmpty() && isEmailVerified) { "Pengguna belum login atau email belum diverifikasi" }
@@ -271,20 +336,23 @@ class RentalRepository(
             )
         ).await()
 
-        if (rental.itemId.isNotEmpty()) {
-            val itemDocRef = getItemsCollection(uid).document(rental.itemId)
-            val itemDoc = itemDocRef.get().await()
-            if (itemDoc.exists()) {
-                val stokTotal = (itemDoc.getLong("stok") ?: 1L).toInt()
-                val stokTersediaSaatIni = (itemDoc.getLong("stokTersedia") ?: 0L).toInt()
-                val stokTersediaBaru = (stokTersediaSaatIni + rental.jumlah).coerceAtMost(stokTotal)
+        val itemsCollectionRef = getItemsCollection(uid)
+        for (rItem in rental.getItemsList()) {
+            if (rItem.itemId.isNotEmpty()) {
+                val itemDocRef = itemsCollectionRef.document(rItem.itemId)
+                val itemDoc = itemDocRef.get().await()
+                if (itemDoc.exists()) {
+                    val stokTotal = (itemDoc.getLong("stok") ?: 1L).toInt()
+                    val stokTersediaSaatIni = (itemDoc.getLong("stokTersedia") ?: 0L).toInt()
+                    val stokTersediaBaru = (stokTersediaSaatIni + rItem.jumlah).coerceAtMost(stokTotal)
 
-                itemDocRef.update(
-                    mapOf(
-                        "stokTersedia" to stokTersediaBaru,
-                        "status" to "tersedia"
-                    )
-                ).await()
+                    itemDocRef.update(
+                        mapOf(
+                            "stokTersedia" to stokTersediaBaru,
+                            "status" to "tersedia"
+                        )
+                    ).await()
+                }
             }
         }
     }
@@ -294,20 +362,26 @@ class RentalRepository(
         require(uid.isNotEmpty() && isEmailVerified) { "Pengguna belum login atau email belum diverifikasi" }
 
         getRentalsCollection(uid).document(rental.id).delete().await()
-        if (rental.itemId.isNotEmpty() && rental.status == "berjalan") {
-            val itemDocRef = getItemsCollection(uid).document(rental.itemId)
-            val itemDoc = itemDocRef.get().await()
-            if (itemDoc.exists()) {
-                val stokTotal = (itemDoc.getLong("stok") ?: 1L).toInt()
-                val stokTersediaSaatIni = (itemDoc.getLong("stokTersedia") ?: 0L).toInt()
-                val stokTersediaBaru = (stokTersediaSaatIni + rental.jumlah).coerceAtMost(stokTotal)
 
-                itemDocRef.update(
-                    mapOf(
-                        "stokTersedia" to stokTersediaBaru,
-                        "status" to "tersedia"
-                    )
-                ).await()
+        if (rental.status == "berjalan") {
+            val itemsCollectionRef = getItemsCollection(uid)
+            for (rItem in rental.getItemsList()) {
+                if (rItem.itemId.isNotEmpty()) {
+                    val itemDocRef = itemsCollectionRef.document(rItem.itemId)
+                    val itemDoc = itemDocRef.get().await()
+                    if (itemDoc.exists()) {
+                        val stokTotal = (itemDoc.getLong("stok") ?: 1L).toInt()
+                        val stokTersediaSaatIni = (itemDoc.getLong("stokTersedia") ?: 0L).toInt()
+                        val stokTersediaBaru = (stokTersediaSaatIni + rItem.jumlah).coerceAtMost(stokTotal)
+
+                        itemDocRef.update(
+                            mapOf(
+                                "stokTersedia" to stokTersediaBaru,
+                                "status" to "tersedia"
+                            )
+                        ).await()
+                    }
+                }
             }
         }
     }

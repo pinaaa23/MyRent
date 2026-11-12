@@ -21,8 +21,10 @@ import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Check
 import androidx.compose.material.icons.filled.Checkroom
 import androidx.compose.material.icons.filled.Search
 import androidx.compose.material3.Card
@@ -64,7 +66,7 @@ import com.myrent.app.ui.theme.TextPrimary
 import com.myrent.app.ui.theme.TextSecondary
 
 /**
- * Komponen reusable Katalog Barang Adaptif & Responsif (Grid Adaptif HP/Tablet, Pencarian, & Filter Kategori)
+ * Komponen reusable Katalog Barang Adaptif & Responsif (Dukungan Multi-Pilih Barang)
  */
 @Composable
 fun CatalogContent(
@@ -76,7 +78,7 @@ fun CatalogContent(
     onKategoriSelected: (String) -> Unit,
     fotoRepository: FotoRepository,
     isSelectMode: Boolean = false,
-    selectedItemId: String = "",
+    selectedItemIds: Set<String> = emptySet(),
     onItemClick: (Item) -> Unit,
     modifier: Modifier = Modifier
 ) {
@@ -182,7 +184,7 @@ fun CatalogContent(
                     }
                 }
             } else {
-                // Grid Adaptif: 2 kolom di HP (minSize = 160dp), 3-5 kolom di Tablet/Layar Lebar
+                // Grid Adaptif: 2 kolom di HP, 3-5 kolom di Tablet
                 LazyVerticalGrid(
                     columns = GridCells.Adaptive(minSize = 160.dp),
                     contentPadding = PaddingValues(start = 16.dp, end = 16.dp, bottom = 90.dp),
@@ -192,7 +194,7 @@ fun CatalogContent(
                 ) {
                     items(items, key = { it.id }) { item ->
                         val isAvailable = item.stokTersedia > 0 && item.status != "perbaikan"
-                        val isSelected = isSelectMode && item.id == selectedItemId
+                        val isSelected = isSelectMode && selectedItemIds.contains(item.id)
 
                         ReusableItemCard(
                             item = item,
@@ -214,7 +216,7 @@ fun CatalogContent(
 }
 
 /**
- * Kartu Item Barang Reusable (Sudut 20dp, Surface #35302B, Garis Emas 12% Alpha)
+ * Kartu Item Barang Reusable (Mendukung Tanda Centang untuk Multi-Selection)
  */
 @Composable
 fun ReusableItemCard(
@@ -237,7 +239,7 @@ fun ReusableItemCard(
             .alpha(cardAlpha)
             .clickable(enabled = !isSelectMode || isAvailable) { onClick() },
         shape = RoundedCornerShape(20.dp),
-        border = BorderStroke(1.dp, if (isSelected) AccentGold else GoldBorderColor),
+        border = BorderStroke(if (isSelected) 2.dp else 1.dp, if (isSelected) AccentGold else GoldBorderColor),
         colors = CardDefaults.cardColors(
             containerColor = if (isSelected) DarkSurfaceVariant else DarkSurface
         )
@@ -266,6 +268,26 @@ fun ReusableItemCard(
                     )
                 }
 
+                // Tanda Centang Emas jika Terpilih
+                if (isSelected) {
+                    Box(
+                        modifier = Modifier
+                            .align(Alignment.TopStart)
+                            .padding(8.dp)
+                            .clip(CircleShape)
+                            .background(AccentGold)
+                            .padding(4.dp)
+                    ) {
+                        Icon(
+                            imageVector = Icons.Filled.Check,
+                            contentDescription = "Terpilih",
+                            tint = OnAccentGold,
+                            modifier = Modifier.size(16.dp)
+                        )
+                    }
+                }
+
+                // Badge Status & Stok
                 val (badgeBg, badgeText) = when {
                     item.stokTersedia == 0 -> AccentGold to stringResource(R.string.status_rented)
                     item.status == "perbaikan" -> StatusRed to stringResource(R.string.status_maintenance)

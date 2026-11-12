@@ -92,7 +92,7 @@ fun RentalScreen(
 
     var showPilihBarangScreen by remember { mutableStateOf(false) }
     var showSewaBaruBottomSheet by remember { mutableStateOf(false) }
-    var selectedItemForSewa by remember { mutableStateOf<Item?>(null) }
+    var selectedItemsForSewa by remember { mutableStateOf<List<Item>>(emptyList()) }
 
     var selectedRentalForDetail by remember { mutableStateOf<Rental?>(null) }
     var rentalToEdit by remember { mutableStateOf<Rental?>(null) }
@@ -105,10 +105,10 @@ fun RentalScreen(
     if (showPilihBarangScreen) {
         PilihBarangScreen(
             catalogViewModel = catalogViewModel,
-            initialSelectedItem = selectedItemForSewa,
+            initialSelectedItems = selectedItemsForSewa,
             onBack = { showPilihBarangScreen = false },
-            onBarangDipilih = { item ->
-                selectedItemForSewa = item
+            onBarangDipilih = { itemsList ->
+                selectedItemsForSewa = itemsList
                 showPilihBarangScreen = false
                 showSewaBaruBottomSheet = true
             }
@@ -124,7 +124,7 @@ fun RentalScreen(
                 FloatingActionButton(
                     onClick = {
                         rentalToEdit = null
-                        selectedItemForSewa = null
+                        selectedItemsForSewa = emptyList()
                         rentalViewModel.resetUiState()
                         showPilihBarangScreen = true
                     },
@@ -275,13 +275,18 @@ fun RentalScreen(
         SewaBaruBottomSheet(
             sheetState = sheetStateForm,
             viewModel = rentalViewModel,
-            selectedItem = selectedItemForSewa,
+            selectedItems = selectedItemsForSewa,
             rentalToEdit = rentalToEdit,
-            onChangeItemRequested = {
+            onChangeItemRequested = { currentList ->
+                selectedItemsForSewa = currentList
                 showSewaBaruBottomSheet = false
                 showPilihBarangScreen = true
             },
-            onDismiss = { showSewaBaruBottomSheet = false }
+            onDismiss = {
+                showSewaBaruBottomSheet = false
+                selectedItemsForSewa = emptyList()
+                rentalToEdit = null
+            }
         )
     }
 
@@ -335,7 +340,7 @@ fun RentalCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text(
-                    text = rental.namaBarang,
+                    text = rental.getNamaDisplay(),
                     fontSize = 16.sp,
                     fontWeight = FontWeight.Bold,
                     color = TextPrimary

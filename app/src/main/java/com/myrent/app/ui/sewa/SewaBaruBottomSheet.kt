@@ -1,6 +1,7 @@
 package com.myrent.app.ui.sewa
 
 import android.app.DatePickerDialog
+import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
@@ -20,9 +21,13 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.AddCircleOutline
 import androidx.compose.material.icons.filled.CalendarToday
 import androidx.compose.material.icons.filled.Checkroom
+import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.RemoveCircleOutline
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -30,15 +35,17 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.OutlinedTextFieldDefaults
 import androidx.compose.material3.SheetState
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -59,12 +66,15 @@ import com.myrent.app.data.customer.normalizeNoWa
 import com.myrent.app.data.foto.FotoRepository
 import com.myrent.app.data.items.Item
 import com.myrent.app.data.rentals.Rental
+import com.myrent.app.data.rentals.RentalItem
 import com.myrent.app.ui.screens.formatDate
 import com.myrent.app.ui.screens.formatRupiah
 import com.myrent.app.ui.theme.AccentGold
-import com.myrent.app.ui.theme.DarkBackground
 import com.myrent.app.ui.theme.DarkSurface
 import com.myrent.app.ui.theme.DarkSurfaceVariant
+import com.myrent.app.ui.theme.GoldBorderColor
+import com.myrent.app.ui.theme.OnAccentGold
+import com.myrent.app.ui.theme.StatusRed
 import com.myrent.app.ui.theme.TextPrimary
 import com.myrent.app.ui.theme.TextSecondary
 import java.util.Calendar
@@ -76,18 +86,24 @@ fun calculateDays(startMs: Long, endMs: Long): Int {
     return if (days <= 0) 1 else days
 }
 
+data class RentalItemRowState(
+    val item: Item,
+    var jumlah: Int = 1
+)
+
 /**
- * LANGKAH 2 - Bottom Sheet Formulir "Sewa Baru" dengan Saran Otomatis Penyewa & Format Rupiah
+ * Bottom Sheet Formulir "Sewa Baru" dengan Preservasi Form Isian & Media Sosial Konsumen Wajib
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun SewaBaruBottomSheet(
     sheetState: SheetState,
     viewModel: RentalViewModel,
-    selectedItem: Item?,
+    selectedItems: List<Item> = emptyList(),
+    selectedItem: Item? = selectedItems.firstOrNull(),
     rentalToEdit: Rental? = null,
     fotoRepository: FotoRepository = FotoRepository(),
-    onChangeItemRequested: () -> Unit,
+    onChangeItemRequested: (List<Item>) -> Unit,
     onDismiss: () -> Unit
 ) {
     val context = LocalContext.current
@@ -96,41 +112,115 @@ fun SewaBaruBottomSheet(
     val isLoading = uiState is RentalUiState.Loading
 
     val customerList by viewModel.customerList.collectAsState()
+    val draftForm by viewModel.draftForm.collectAsState()
 
     val userDoc by viewModel.userDocState.collectAsState()
     val kasirNama = userDoc.nama.ifEmpty { "Admin MyRent" }
 
-    var namaPenyewa by remember { mutableStateOf(rentalToEdit?.namaPenyewa ?: "") }
-    var noWa by remember { mutableStateOf(rentalToEdit?.noWa ?: "") }
+    // Membaca dari draftForm jika sedang menambah barang agar isian form tidak hilang
+    var namaPenyewa by remember(rentalToEdit) { mutableStateOf(rentalToEdit?.namaPenyewa ?: draftForm.namaPenyewa) }
+    var noWa by remember(rentalToEdit) { mutableStateOf(rentalToEdit?.noWa ?: draftForm.noWa) }
+    var medsosPenyewa by remember(rentalToEdit) { mutableStateOf(rentalToEdit?.medsosPenyewa ?: draftForm.medsosPenyewa) }
 
     var showNamaSuggestions by remember { mutableStateOf(false) }
     var showWaSuggestions by remember { mutableStateOf(false) }
 
-    val calStart = remember { Calendar.getInstance().apply { timeInMillis = rentalToEdit?.tanggalMulai ?: System.currentTimeMillis() } }
-    val calEnd = remember { Calendar.getInstance().apply { timeInMillis = rentalToEdit?.tanggalKembali ?: (System.currentTimeMillis() + 86400000L) } }
+    val initialStartMs = rentalToEdit?.tanggalMulai ?: if (draftForm.tglMulaiMs > 0L) draftForm.tglMulaiMs else System.currentTimeMillis()
+    val initialEndMs = rentalToEdit?.tanggalKembali ?: if (draftForm.tglKembaliMs > 0L) draftForm.tglKembaliMs else (System.currentTimeMillis() + 86400000L)
 
-    var tglMulaiMs by remember { mutableStateOf(calStart.timeInMillis) }
-    var tglKembaliMs by remember { mutableStateOf(calEnd.timeInMillis) }
+    val calStart = remember(rentalToEdit) { Calendar.getInstance().apply { timeInMillis = initialStartMs } }
+    val calEnd = remember(rentalToEdit) { Calendar.getInstance().apply { timeInMillis = initialEndMs } }
 
-    var lamaHari by remember { mutableStateOf(calculateDays(tglMulaiMs, tglKembaliMs)) }
-    var jumlahText by remember { mutableStateOf(rentalToEdit?.jumlah?.toString() ?: "1") }
+    var tglMulaiMs by remember(rentalToEdit) { mutableStateOf(calStart.timeInMillis) }
+    var tglKembaliMs by remember(rentalToEdit) { mutableStateOf(calEnd.timeInMillis) }
 
-    var hargaTotalText by remember(selectedItem, lamaHari, jumlahText, rentalToEdit) {
-        mutableStateOf(
-            if (rentalToEdit != null) {
-                rentalToEdit.hargaTotal.toString()
-            } else if (selectedItem != null) {
-                val jml = jumlahText.toIntOrNull() ?: 1
-                (selectedItem.hargaSewa * lamaHari.toLong() * jml.toLong()).toString()
-            } else "0"
-        )
+    var lamaHari by remember(tglMulaiMs, tglKembaliMs) { mutableStateOf(calculateDays(tglMulaiMs, tglKembaliMs)) }
+
+    // Inisialisasi daftar barang yang disewa
+    val rentedItemsList = remember(rentalToEdit) {
+        val list = mutableStateListOf<RentalItemRowState>()
+        if (rentalToEdit != null) {
+            rentalToEdit.getItemsList().forEach { rItem ->
+                list.add(
+                    RentalItemRowState(
+                        item = Item(
+                            id = rItem.itemId,
+                            nama = rItem.nama,
+                            kategori = rItem.kategori,
+                            hargaSewa = rItem.hargaSatuan,
+                            stokTersedia = rItem.jumlah.coerceAtLeast(10),
+                            fotoBase64 = rItem.fotoBase64
+                        ),
+                        jumlah = rItem.jumlah
+                    )
+                )
+            }
+        } else if (selectedItems.isNotEmpty()) {
+            selectedItems.forEach { item ->
+                list.add(RentalItemRowState(item = item, jumlah = 1))
+            }
+        } else if (selectedItem != null) {
+            list.add(RentalItemRowState(item = selectedItem, jumlah = 1))
+        }
+        list
     }
 
-    var dpText by remember { mutableStateOf(rentalToEdit?.dp?.toString() ?: "0") }
-    var catatan by remember { mutableStateOf(rentalToEdit?.catatan ?: "") }
+    // Sinkronisasi barang terpilih saat pengguna menambah/mengubah barang dari Katalog tanpa menghapus isian form
+    LaunchedEffect(selectedItems) {
+        if (rentalToEdit == null && selectedItems.isNotEmpty()) {
+            val existingQtyMap = rentedItemsList.associate { it.item.id to it.jumlah }
+            rentedItemsList.clear()
+            selectedItems.forEach { item ->
+                val qty = existingQtyMap[item.id] ?: 1
+                rentedItemsList.add(RentalItemRowState(item = item, jumlah = qty))
+            }
+        }
+    }
 
-    var showPaymentScreen by remember { mutableStateOf(false) }
-    var createdRentalForNota by remember { mutableStateOf<Rental?>(null) }
+    // Hitung otomatis total biaya dari sum(hargaSatuan * jumlah) * lamaHari
+    val calculatedTotal = remember(rentedItemsList.map { it.jumlah }, rentedItemsList.map { it.item.id }, lamaHari) {
+        val sumUnit = rentedItemsList.sumOf { it.item.hargaSewa * it.jumlah.toLong() }
+        sumUnit * lamaHari.toLong()
+    }
+
+    var hargaTotalText by remember(calculatedTotal, rentalToEdit) {
+        mutableStateOf(if (rentalToEdit != null) rentalToEdit.hargaTotal.toString() else calculatedTotal.toString())
+    }
+
+    LaunchedEffect(calculatedTotal) {
+        if (!isEditMode) {
+            hargaTotalText = calculatedTotal.toString()
+        }
+    }
+
+    // dpText default kosong (tanpa prefilled "0" yang harus dihapus)
+    var dpText by remember(rentalToEdit) {
+        mutableStateOf(if (rentalToEdit != null && rentalToEdit.dp > 0L) rentalToEdit.dp.toString() else draftForm.dpText)
+    }
+
+    var catatan by remember(rentalToEdit) { mutableStateOf(rentalToEdit?.catatan ?: draftForm.catatan) }
+
+    var showPaymentScreen by remember(rentalToEdit) { mutableStateOf(false) }
+    var createdRentalForNota by remember(rentalToEdit) { mutableStateOf<Rental?>(null) }
+
+    LaunchedEffect(Unit) {
+        showPaymentScreen = false
+        createdRentalForNota = null
+    }
+
+    // Fungsi simpan draft otomatis ke ViewModel
+    fun saveFormToDraft() {
+        viewModel.updateDraftForm(
+            namaPenyewa = namaPenyewa,
+            noWa = noWa,
+            medsosPenyewa = medsosPenyewa,
+            tglMulaiMs = tglMulaiMs,
+            tglKembaliMs = tglKembaliMs,
+            dpText = dpText,
+            catatan = catatan,
+            selectedItems = rentedItemsList.map { it.item }
+        )
+    }
 
     val totalLong = hargaTotalText.toLongOrNull() ?: 0L
     val dpLong = dpText.toLongOrNull() ?: 0L
@@ -138,17 +228,15 @@ fun SewaBaruBottomSheet(
 
     val scrollState = rememberScrollState()
 
-    // Filter Saran Nama Penyewa (Maksimal 5 Unik)
-    val namaSuggestions = remember(namaPenyewa, customerList, showNamaSuggestions) {
+    val nameSuggestions = remember(namaPenyewa, customerList, showNamaSuggestions) {
         if (showNamaSuggestions && namaPenyewa.trim().isNotEmpty()) {
             customerList
                 .filter { it.nama.contains(namaPenyewa, ignoreCase = true) }
-                .distinctBy { normalizeNoWa(it.noWa) }
+                .distinctBy { it.nama.trim().lowercase() }
                 .take(5)
         } else emptyList()
     }
 
-    // Filter Saran Nomor WA Penyewa (Maksimal 5 Unik)
     val waSuggestions = remember(noWa, customerList, showWaSuggestions) {
         if (showWaSuggestions && noWa.trim().isNotEmpty()) {
             val normInput = normalizeNoWa(noWa)
@@ -159,7 +247,6 @@ fun SewaBaruBottomSheet(
         } else emptyList()
     }
 
-    // 1. Tampilkan Nota Transaksi jika transaksi selesai
     if (createdRentalForNota != null) {
         NotaTransaksiDialog(
             rental = createdRentalForNota!!,
@@ -170,56 +257,77 @@ fun SewaBaruBottomSheet(
             viewModel = viewModel,
             onClose = {
                 createdRentalForNota = null
+                viewModel.clearDraftForm()
                 onDismiss()
             }
         )
         return
     }
 
-    // 2. Tampilkan Layar Pembayaran Full-Screen
     if (showPaymentScreen) {
-        val jmlInt = jumlahText.toIntOrNull() ?: 1
+        val primaryName = rentedItemsList.firstOrNull()?.item?.nama ?: "Barang Sewa"
+        val displayName = if (rentedItemsList.size > 1) "$primaryName +${rentedItemsList.size - 1} lainnya" else primaryName
+        val totalUnits = rentedItemsList.sumOf { it.jumlah }
+
         PembayaranScreen(
             totalBayar = dpLong,
             namaPenyewa = namaPenyewa,
-            namaBarang = selectedItem?.nama ?: (rentalToEdit?.namaBarang ?: "Barang Sewa"),
-            jumlahUnit = jmlInt,
+            namaBarang = displayName,
+            jumlahUnit = totalUnits,
             cabangNama = userDoc.namaToko.ifEmpty { "MYRENT STORE" },
             onBack = { showPaymentScreen = false },
             onKonfirmasiPembayaran = { metode ->
+                val rentalItemsToSave = rentedItemsList.map {
+                    RentalItem(
+                        itemId = it.item.id,
+                        nama = it.item.nama,
+                        kategori = it.item.kategori,
+                        hargaSatuan = it.item.hargaSewa,
+                        jumlah = it.jumlah,
+                        fotoBase64 = it.item.fotoBase64
+                    )
+                }
+
                 if (isEditMode) {
                     viewModel.updateSewa(
-                        rental = rentalToEdit!!,
+                        rental = rentalToEdit!!.copy(items = rentalItemsToSave),
                         namaPenyewa = namaPenyewa,
                         noWa = noWa,
+                        medsosPenyewa = medsosPenyewa,
                         tanggalMulai = tglMulaiMs,
                         tanggalKembali = tglKembaliMs,
                         lamaHari = lamaHari,
-                        jumlah = jmlInt,
+                        jumlah = totalUnits,
                         hargaTotal = totalLong,
                         dp = dpLong,
                         metodePembayaran = metode,
                         catatan = catatan,
                         onSuccess = {
                             showPaymentScreen = false
+                            viewModel.clearDraftForm()
                             onDismiss()
                         }
                     )
                 } else {
+                    val primaryItem = rentedItemsList.firstOrNull()?.item
+
                     viewModel.prosesPembayaranDanSimpanSewa(
-                        selectedItem = selectedItem,
+                        selectedItem = primaryItem,
                         namaPenyewa = namaPenyewa,
                         noWa = noWa,
+                        medsosPenyewa = medsosPenyewa,
                         tanggalMulai = tglMulaiMs,
                         tanggalKembali = tglKembaliMs,
                         lamaHari = lamaHari,
-                        jumlah = jmlInt,
+                        jumlah = totalUnits,
                         hargaTotal = totalLong,
                         dp = dpLong,
                         metodePembayaran = metode,
                         catatan = catatan,
+                        rentedItems = rentalItemsToSave,
                         onSuccess = { savedRental ->
                             showPaymentScreen = false
+                            viewModel.clearDraftForm()
                             createdRentalForNota = savedRental
                         }
                     )
@@ -229,9 +337,11 @@ fun SewaBaruBottomSheet(
         return
     }
 
-    // 3. Form Utama Input Data Sewa
     ModalBottomSheet(
-        onDismissRequest = onDismiss,
+        onDismissRequest = {
+            viewModel.clearDraftForm()
+            onDismiss()
+        },
         sheetState = sheetState,
         containerColor = DarkSurface
     ) {
@@ -239,14 +349,14 @@ fun SewaBaruBottomSheet(
             modifier = Modifier
                 .fillMaxWidth()
                 .verticalScroll(scrollState)
-                .padding(horizontal = 24.dp, vertical = 12.dp),
-            horizontalAlignment = Alignment.CenterHorizontally
+                .padding(horizontal = 24.dp, vertical = 12.dp)
         ) {
             Text(
                 text = if (isEditMode) stringResource(R.string.btn_edit_rental) else stringResource(R.string.title_add_rental),
                 fontSize = 20.sp,
                 fontWeight = FontWeight.Bold,
-                color = TextPrimary
+                color = TextPrimary,
+                modifier = Modifier.align(Alignment.CenterHorizontally)
             )
 
             Spacer(modifier = Modifier.height(16.dp))
@@ -254,110 +364,140 @@ fun SewaBaruBottomSheet(
             if (uiState is RentalUiState.Error) {
                 Text(
                     text = (uiState as RentalUiState.Error).message,
-                    color = Color(0xFFFF6B6B),
+                    color = StatusRed,
                     fontSize = 14.sp,
-                    modifier = Modifier.padding(bottom = 12.dp)
+                    modifier = Modifier
+                        .padding(bottom = 12.dp)
+                        .align(Alignment.CenterHorizontally)
                 )
             }
 
-            // RINGKASAN BARANG TERPILIH (Langkah 2 - Tanpa Dropdown)
-            if (selectedItem != null) {
-                val bitmap = remember(selectedItem.fotoBase64) {
-                    if (selectedItem.fotoBase64.isNotEmpty()) fotoRepository.base64ToBitmap(selectedItem.fotoBase64) else null
-                }
+            // BAGIAN "Barang yang disewa"
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text(
+                    text = "Barang yang disewa (${rentedItemsList.size})",
+                    fontSize = 15.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
+                )
 
-                Card(
-                    modifier = Modifier.fillMaxWidth(),
-                    shape = RoundedCornerShape(12.dp),
-                    colors = CardDefaults.cardColors(containerColor = DarkSurfaceVariant)
-                ) {
+                if (!isEditMode) {
                     Row(
-                        modifier = Modifier.padding(12.dp),
+                        modifier = Modifier
+                            .clip(RoundedCornerShape(6.dp))
+                            .clickable {
+                                saveFormToDraft()
+                                onChangeItemRequested(rentedItemsList.map { it.item })
+                            }
+                            .padding(horizontal = 8.dp, vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Box(
-                            modifier = Modifier
-                                .size(64.dp)
-                                .clip(RoundedCornerShape(8.dp))
-                                .background(DarkBackground),
-                            contentAlignment = Alignment.Center
+                        Text("+ Tambah Barang", fontSize = 12.sp, fontWeight = FontWeight.Bold, color = AccentGold)
+                    }
+                }
+            }
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            if (rentedItemsList.isEmpty()) {
+                Text("Belum ada barang dipilih", fontSize = 13.sp, color = StatusRed)
+            } else {
+                rentedItemsList.forEachIndexed { index, rowState ->
+                    Card(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        border = BorderStroke(1.dp, GoldBorderColor),
+                        colors = CardDefaults.cardColors(containerColor = DarkSurfaceVariant)
+                    ) {
+                        Row(
+                            modifier = Modifier.padding(10.dp),
+                            verticalAlignment = Alignment.CenterVertically
                         ) {
-                            if (bitmap != null) {
-                                Image(
-                                    bitmap = bitmap.asImageBitmap(),
-                                    contentDescription = selectedItem.nama,
-                                    contentScale = ContentScale.Crop,
-                                    modifier = Modifier.fillMaxSize()
-                                )
-                            } else {
-                                Icon(
-                                    imageVector = Icons.Filled.Checkroom,
-                                    contentDescription = selectedItem.nama,
-                                    tint = TextSecondary,
-                                    modifier = Modifier.size(28.dp)
-                                )
+                            val bitmap = remember(rowState.item.fotoBase64) {
+                                if (rowState.item.fotoBase64.isNotEmpty()) fotoRepository.base64ToBitmap(rowState.item.fotoBase64) else null
                             }
-                        }
+                            Box(
+                                modifier = Modifier
+                                    .size(48.dp)
+                                    .clip(RoundedCornerShape(8.dp))
+                                    .background(DarkSurface),
+                                contentAlignment = Alignment.Center
+                            ) {
+                                if (bitmap != null) {
+                                    Image(bitmap = bitmap.asImageBitmap(), contentDescription = rowState.item.nama, contentScale = ContentScale.Crop, modifier = Modifier.fillMaxSize())
+                                } else {
+                                    Icon(Icons.Filled.Checkroom, contentDescription = null, tint = TextSecondary, modifier = Modifier.size(24.dp))
+                                }
+                            }
 
-                        Spacer(modifier = Modifier.width(12.dp))
+                            Spacer(modifier = Modifier.width(10.dp))
 
-                        Column(modifier = Modifier.weight(1f)) {
-                            Text(
-                                text = selectedItem.nama,
-                                fontSize = 15.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = TextPrimary
-                            )
-                            Text(
-                                text = "${selectedItem.kategori} • ${formatRupiah(selectedItem.hargaSewa)}/unit",
-                                fontSize = 12.sp,
-                                color = TextSecondary
-                            )
-                            Spacer(modifier = Modifier.height(2.dp))
-                            Text(
-                                text = "Tersedia: ${selectedItem.stokTersedia} unit",
-                                fontSize = 12.sp,
-                                fontWeight = FontWeight.Bold,
-                                color = AccentGold
-                            )
-                        }
+                            Column(modifier = Modifier.weight(1f)) {
+                                Text(rowState.item.nama, fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 14.sp, maxLines = 1)
+                                Text("${formatRupiah(rowState.item.hargaSewa)} / unit", fontSize = 11.sp, color = TextSecondary)
+                            }
 
-                        if (!isEditMode) {
-                            TextButton(onClick = onChangeItemRequested) {
-                                Text("Ganti", color = AccentGold, fontWeight = FontWeight.Bold)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                IconButton(
+                                    onClick = {
+                                        if (rowState.jumlah > 1) {
+                                            rentedItemsList[index] = rowState.copy(jumlah = rowState.jumlah - 1)
+                                        }
+                                    },
+                                    enabled = rowState.jumlah > 1,
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(Icons.Filled.RemoveCircleOutline, contentDescription = "Kurangi", tint = if (rowState.jumlah > 1) AccentGold else TextSecondary)
+                                }
+
+                                Text("${rowState.jumlah}", fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 14.sp, modifier = Modifier.padding(horizontal = 6.dp))
+
+                                IconButton(
+                                    onClick = {
+                                        if (rowState.jumlah < rowState.item.stokTersedia) {
+                                            rentedItemsList[index] = rowState.copy(jumlah = rowState.jumlah + 1)
+                                        }
+                                    },
+                                    enabled = rowState.jumlah < rowState.item.stokTersedia,
+                                    modifier = Modifier.size(28.dp)
+                                ) {
+                                    Icon(Icons.Filled.AddCircleOutline, contentDescription = "Tambah", tint = if (rowState.jumlah < rowState.item.stokTersedia) AccentGold else TextSecondary)
+                                }
+
+                                if (rentedItemsList.size > 1 && !isEditMode) {
+                                    IconButton(
+                                        onClick = { rentedItemsList.removeAt(index) },
+                                        modifier = Modifier.size(28.dp)
+                                    ) {
+                                        Icon(Icons.Filled.Delete, contentDescription = "Hapus", tint = StatusRed, modifier = Modifier.size(18.dp))
+                                    }
+                                }
                             }
                         }
                     }
                 }
-            } else if (rentalToEdit != null) {
-                OutlinedTextField(
-                    value = rentalToEdit.namaBarang,
-                    onValueChange = {},
-                    readOnly = true,
-                    enabled = false,
-                    label = { Text("Barang Disewa") },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        disabledBorderColor = DarkSurfaceVariant,
-                        disabledLabelColor = AccentGold,
-                        disabledTextColor = TextPrimary
-                    )
-                )
             }
 
-            Spacer(modifier = Modifier.height(12.dp))
+            Spacer(modifier = Modifier.height(16.dp))
 
-            // Nama Penyewa dengan Saran Otomatis
-            Column(modifier = Modifier.fillMaxWidth()) {
+            // Nama Penyewa
+            Box(modifier = Modifier.fillMaxWidth()) {
                 OutlinedTextField(
                     value = namaPenyewa,
-                    onValueChange = {
-                        namaPenyewa = it
+                    onValueChange = { input ->
+                        namaPenyewa = input
+                        saveFormToDraft()
                         showNamaSuggestions = true
-                        showWaSuggestions = false
                         viewModel.resetUiState()
                     },
                     label = { Text(stringResource(R.string.label_tenant_name)) },
+                    placeholder = { Text("misal: Budi Santoso") },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                     colors = OutlinedTextFieldDefaults.colors(
@@ -367,33 +507,31 @@ fun SewaBaruBottomSheet(
                     )
                 )
 
-                // Kartu Daftar Saran Nama
-                if (namaSuggestions.isNotEmpty()) {
+                if (nameSuggestions.isNotEmpty()) {
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 4.dp),
+                            .padding(top = 60.dp),
                         shape = RoundedCornerShape(8.dp),
                         colors = CardDefaults.cardColors(containerColor = DarkSurfaceVariant)
                     ) {
-                        Column(modifier = Modifier.padding(vertical = 4.dp)) {
-                            namaSuggestions.forEach { customer ->
+                        Column {
+                            nameSuggestions.forEach { customer ->
                                 Row(
                                     modifier = Modifier
                                         .fillMaxWidth()
                                         .clickable {
                                             namaPenyewa = customer.nama
                                             noWa = customer.noWa
+                                            saveFormToDraft()
                                             showNamaSuggestions = false
                                         }
-                                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                                        .padding(12.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Icon(Icons.Filled.Person, contentDescription = "User", tint = AccentGold, modifier = Modifier.size(18.dp))
+                                    Icon(Icons.Filled.Person, contentDescription = null, tint = AccentGold, modifier = Modifier.size(16.dp))
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text(customer.nama, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text("(${customer.noWa})", color = TextSecondary, fontSize = 12.sp)
+                                    Text(text = "${customer.nama} (${customer.noWa})", color = TextPrimary, fontSize = 13.sp)
                                 }
                             }
                         }
@@ -403,14 +541,14 @@ fun SewaBaruBottomSheet(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Nomor WA Penyewa dengan Saran Otomatis
-            Column(modifier = Modifier.fillMaxWidth()) {
+            // Nomor WA Penyewa
+            Box(modifier = Modifier.fillMaxWidth()) {
                 OutlinedTextField(
                     value = noWa,
                     onValueChange = { input ->
                         noWa = input.filter { it.isDigit() || it == '+' }
+                        saveFormToDraft()
                         showWaSuggestions = true
-                        showNamaSuggestions = false
                         viewModel.resetUiState()
                     },
                     label = { Text(stringResource(R.string.label_tenant_phone)) },
@@ -425,16 +563,15 @@ fun SewaBaruBottomSheet(
                     )
                 )
 
-                // Kartu Daftar Saran Nomor WA
                 if (waSuggestions.isNotEmpty()) {
                     Card(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(top = 4.dp),
+                            .padding(top = 60.dp),
                         shape = RoundedCornerShape(8.dp),
                         colors = CardDefaults.cardColors(containerColor = DarkSurfaceVariant)
                     ) {
-                        Column(modifier = Modifier.padding(vertical = 4.dp)) {
+                        Column {
                             waSuggestions.forEach { customer ->
                                 Row(
                                     modifier = Modifier
@@ -442,16 +579,15 @@ fun SewaBaruBottomSheet(
                                         .clickable {
                                             namaPenyewa = customer.nama
                                             noWa = customer.noWa
+                                            saveFormToDraft()
                                             showWaSuggestions = false
                                         }
-                                        .padding(horizontal = 12.dp, vertical = 8.dp),
+                                        .padding(12.dp),
                                     verticalAlignment = Alignment.CenterVertically
                                 ) {
-                                    Icon(Icons.Filled.Person, contentDescription = "User", tint = AccentGold, modifier = Modifier.size(18.dp))
+                                    Icon(Icons.Filled.Person, contentDescription = null, tint = AccentGold, modifier = Modifier.size(16.dp))
                                     Spacer(modifier = Modifier.width(8.dp))
-                                    Text(customer.noWa, color = TextPrimary, fontWeight = FontWeight.Bold, fontSize = 14.sp)
-                                    Spacer(modifier = Modifier.width(6.dp))
-                                    Text("(${customer.nama})", color = TextSecondary, fontSize = 12.sp)
+                                    Text(text = "${customer.nama} (${customer.noWa})", color = TextPrimary, fontSize = 13.sp)
                                 }
                             }
                         }
@@ -461,142 +597,162 @@ fun SewaBaruBottomSheet(
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Baris Tanggal Mulai & Tanggal Kembali
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Box(modifier = Modifier.weight(1f)) {
-                    OutlinedTextField(
-                        value = formatDate(tglMulaiMs),
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text(stringResource(R.string.label_start_date)) },
-                        trailingIcon = { Icon(Icons.Filled.CalendarToday, contentDescription = "Tgl Mulai", tint = AccentGold, modifier = Modifier.size(18.dp)) },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = AccentGold, unfocusedBorderColor = DarkSurfaceVariant, focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary)
-                    )
-
-                    Box(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .clickable {
-                                val cal = Calendar.getInstance().apply { timeInMillis = tglMulaiMs }
-                                DatePickerDialog(
-                                    context,
-                                    { _, y, m, d ->
-                                        val newCal = Calendar.getInstance().apply { set(y, m, d) }
-                                        tglMulaiMs = newCal.timeInMillis
-                                        lamaHari = calculateDays(tglMulaiMs, tglKembaliMs)
-                                        val jmlInt = jumlahText.toIntOrNull() ?: 1
-                                        selectedItem?.let { hargaTotalText = (it.hargaSewa * lamaHari.toLong() * jmlInt.toLong()).toString() }
-                                    },
-                                    cal.get(Calendar.YEAR),
-                                    cal.get(Calendar.MONTH),
-                                    cal.get(Calendar.DAY_OF_MONTH)
-                                ).show()
-                            }
-                    )
-                }
-
-                Box(modifier = Modifier.weight(1f)) {
-                    OutlinedTextField(
-                        value = formatDate(tglKembaliMs),
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text(stringResource(R.string.label_end_date)) },
-                        trailingIcon = { Icon(Icons.Filled.CalendarToday, contentDescription = "Tgl Kembali", tint = AccentGold, modifier = Modifier.size(18.dp)) },
-                        modifier = Modifier.fillMaxWidth(),
-                        colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = AccentGold, unfocusedBorderColor = DarkSurfaceVariant, focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary)
-                    )
-
-                    Box(
-                        modifier = Modifier
-                            .matchParentSize()
-                            .clickable {
-                                val cal = Calendar.getInstance().apply { timeInMillis = tglKembaliMs }
-                                DatePickerDialog(
-                                    context,
-                                    { _, y, m, d ->
-                                        val newCal = Calendar.getInstance().apply { set(y, m, d) }
-                                        tglKembaliMs = newCal.timeInMillis
-                                        lamaHari = calculateDays(tglMulaiMs, tglKembaliMs)
-                                        val jmlInt = jumlahText.toIntOrNull() ?: 1
-                                        selectedItem?.let { hargaTotalText = (it.hargaSewa * lamaHari.toLong() * jmlInt.toLong()).toString() }
-                                    },
-                                    cal.get(Calendar.YEAR),
-                                    cal.get(Calendar.MONTH),
-                                    cal.get(Calendar.DAY_OF_MONTH)
-                                ).show()
-                            }
-                    )
-                }
-            }
+            // Media Sosial Konsumen (IG / TikTok / FB) (Wajib)
+            OutlinedTextField(
+                value = medsosPenyewa,
+                onValueChange = { input ->
+                    medsosPenyewa = input
+                    saveFormToDraft()
+                    viewModel.resetUiState()
+                },
+                label = { Text("Media Sosial Konsumen (IG / TikTok / FB) (Wajib)") },
+                placeholder = { Text("misal: @budi_santoso") },
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = AccentGold, unfocusedBorderColor = DarkSurfaceVariant,
+                    focusedLabelColor = AccentGold, unfocusedLabelColor = TextSecondary,
+                    focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary
+                )
+            )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Lama Hari & Jumlah Disewa
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            // Pemilih Tanggal
+            Row(modifier = Modifier.fillMaxWidth()) {
+                val startDatePicker = DatePickerDialog(
+                    context,
+                    { _, y, m, d ->
+                        val cal = Calendar.getInstance().apply { set(y, m, d) }
+                        tglMulaiMs = cal.timeInMillis
+                        if (tglKembaliMs <= tglMulaiMs) {
+                            tglKembaliMs = tglMulaiMs + 86400000L
+                        }
+                        lamaHari = calculateDays(tglMulaiMs, tglKembaliMs)
+                        saveFormToDraft()
+                    },
+                    calStart.get(Calendar.YEAR), calStart.get(Calendar.MONTH), calStart.get(Calendar.DAY_OF_MONTH)
+                )
+
+                val endDatePicker = DatePickerDialog(
+                    context,
+                    { _, y, m, d ->
+                        val cal = Calendar.getInstance().apply { set(y, m, d) }
+                        val endMs = cal.timeInMillis
+                        if (endMs > tglMulaiMs) {
+                            tglKembaliMs = endMs
+                            lamaHari = calculateDays(tglMulaiMs, tglKembaliMs)
+                            saveFormToDraft()
+                        }
+                    },
+                    calEnd.get(Calendar.YEAR), calEnd.get(Calendar.MONTH), calEnd.get(Calendar.DAY_OF_MONTH)
+                )
+
                 OutlinedTextField(
-                    value = "$lamaHari Hari",
+                    value = formatDate(tglMulaiMs),
                     onValueChange = {},
                     readOnly = true,
-                    enabled = false,
-                    label = { Text(stringResource(R.string.label_duration)) },
-                    modifier = Modifier.weight(1f),
-                    colors = OutlinedTextFieldDefaults.colors(disabledBorderColor = DarkSurfaceVariant, disabledTextColor = TextPrimary, disabledLabelColor = TextSecondary)
+                    label = { Text(stringResource(R.string.label_start_date)) },
+                    trailingIcon = {
+                        IconButton(onClick = { startDatePicker.show() }) {
+                            Icon(Icons.Filled.CalendarToday, contentDescription = "Tgl Mulai", tint = AccentGold)
+                        }
+                    },
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(end = 6.dp)
+                        .clickable { startDatePicker.show() },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = AccentGold, unfocusedBorderColor = DarkSurfaceVariant,
+                        focusedLabelColor = AccentGold, unfocusedLabelColor = TextSecondary,
+                        focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary
+                    )
                 )
 
                 OutlinedTextField(
-                    value = jumlahText,
-                    onValueChange = { input ->
-                        val filtered = input.filter { it.isDigit() }
-                        jumlahText = filtered
-                        val jmlInt = filtered.toIntOrNull() ?: 1
-                        selectedItem?.let { hargaTotalText = (it.hargaSewa * lamaHari.toLong() * jmlInt.toLong()).toString() }
-                        viewModel.resetUiState()
+                    value = formatDate(tglKembaliMs),
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text(stringResource(R.string.label_end_date)) },
+                    trailingIcon = {
+                        IconButton(onClick = { endDatePicker.show() }) {
+                            Icon(Icons.Filled.CalendarToday, contentDescription = "Tgl Kembali", tint = AccentGold)
+                        }
                     },
-                    label = { Text(stringResource(R.string.label_rental_quantity)) },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.weight(1.2f),
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = AccentGold, unfocusedBorderColor = DarkSurfaceVariant, focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary)
+                    modifier = Modifier
+                        .weight(1f)
+                        .padding(start = 6.dp)
+                        .clickable { endDatePicker.show() },
+                    colors = OutlinedTextFieldDefaults.colors(
+                        focusedBorderColor = AccentGold, unfocusedBorderColor = DarkSurfaceVariant,
+                        focusedLabelColor = AccentGold, unfocusedLabelColor = TextSecondary,
+                        focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary
+                    )
                 )
             }
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Total Biaya & DP dengan Format Rp
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = formatRupiah(totalLong),
-                    onValueChange = { input ->
-                        val filtered = input.filter { it.isDigit() }
-                        hargaTotalText = filtered
-                        viewModel.resetUiState()
-                    },
-                    label = { Text(stringResource(R.string.label_total_price)) },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.weight(1.2f),
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = AccentGold, unfocusedBorderColor = DarkSurfaceVariant, focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary)
+            // Durasi Sewa
+            OutlinedTextField(
+                value = "$lamaHari Hari",
+                onValueChange = {},
+                readOnly = true,
+                enabled = false,
+                label = { Text(stringResource(R.string.label_duration)) },
+                modifier = Modifier.fillMaxWidth(),
+                colors = OutlinedTextFieldDefaults.colors(
+                    disabledBorderColor = DarkSurfaceVariant,
+                    disabledLabelColor = AccentGold,
+                    disabledTextColor = AccentGold
                 )
-
-                OutlinedTextField(
-                    value = formatRupiah(dpLong),
-                    onValueChange = { input ->
-                        val filtered = input.filter { it.isDigit() }
-                        dpText = filtered
-                        viewModel.resetUiState()
-                    },
-                    label = { Text(stringResource(R.string.label_dp)) },
-                    singleLine = true,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    modifier = Modifier.weight(1f),
-                    colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = AccentGold, unfocusedBorderColor = DarkSurfaceVariant, focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary)
-                )
-            }
+            )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Sisa Pembayaran (Auto Format Rp)
+            // Total Biaya Sewa
+            OutlinedTextField(
+                value = hargaTotalText,
+                onValueChange = { input ->
+                    hargaTotalText = input.filter { it.isDigit() }
+                    viewModel.resetUiState()
+                },
+                label = { Text(stringResource(R.string.label_total_price)) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth(),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = AccentGold, unfocusedBorderColor = DarkSurfaceVariant,
+                    focusedLabelColor = AccentGold, unfocusedLabelColor = TextSecondary,
+                    focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary
+                )
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Input Uang Muka / DP (placeholder "0", default kosong)
+            OutlinedTextField(
+                value = dpText,
+                onValueChange = { input ->
+                    dpText = input.filter { it.isDigit() }
+                    saveFormToDraft()
+                    viewModel.resetUiState()
+                },
+                label = { Text(stringResource(R.string.label_dp)) },
+                placeholder = { Text("0") },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                modifier = Modifier.fillMaxWidth(),
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = AccentGold, unfocusedBorderColor = DarkSurfaceVariant,
+                    focusedLabelColor = AccentGold, unfocusedLabelColor = TextSecondary,
+                    focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary
+                )
+            )
+
+            Spacer(modifier = Modifier.height(12.dp))
+
+            // Sisa Pembayaran
             OutlinedTextField(
                 value = formatRupiah(sisaLong),
                 onValueChange = {},
@@ -604,90 +760,105 @@ fun SewaBaruBottomSheet(
                 enabled = false,
                 label = { Text(stringResource(R.string.label_remaining_payment)) },
                 modifier = Modifier.fillMaxWidth(),
-                colors = OutlinedTextFieldDefaults.colors(disabledBorderColor = DarkSurfaceVariant, disabledTextColor = if (sisaLong == 0L) Color(0xFF2E7D32) else AccentGold, disabledLabelColor = TextSecondary)
+                colors = OutlinedTextFieldDefaults.colors(
+                    disabledBorderColor = DarkSurfaceVariant,
+                    disabledLabelColor = if (sisaLong == 0L) Color(0xFF6BCB77) else StatusRed,
+                    disabledTextColor = if (sisaLong == 0L) Color(0xFF6BCB77) else StatusRed
+                )
             )
 
             Spacer(modifier = Modifier.height(12.dp))
 
-            // Catatan / Jaminan
+            // Catatan / Jaminan Teks
             OutlinedTextField(
                 value = catatan,
-                onValueChange = { catatan = it },
-                label = { Text(stringResource(R.string.label_notes_guarantee)) },
-                placeholder = { Text("KTP / Ukuran M / DP Lunas") },
+                onValueChange = { input ->
+                    catatan = input
+                    saveFormToDraft()
+                },
+                label = { Text("Catatan / Jaminan (Ukuran/KTP/dll)") },
+                placeholder = { Text("misal: KTP / SIM / Kartu Pelajar") },
                 modifier = Modifier.fillMaxWidth(),
-                colors = OutlinedTextFieldDefaults.colors(focusedBorderColor = AccentGold, unfocusedBorderColor = DarkSurfaceVariant, focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary)
+                colors = OutlinedTextFieldDefaults.colors(
+                    focusedBorderColor = AccentGold, unfocusedBorderColor = DarkSurfaceVariant,
+                    focusedLabelColor = AccentGold, unfocusedLabelColor = TextSecondary,
+                    focusedTextColor = TextPrimary, unfocusedTextColor = TextPrimary
+                )
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Tombol Lanjut ke Pembayaran dengan Validasi Stok & Validasi Uang Muka / DP
+            // Tombol Lanjut ke Pembayaran / Simpan
             Button(
                 onClick = {
-                    val jmlInt = jumlahText.toIntOrNull() ?: 1
                     val dpVal = dpText.toLongOrNull() ?: 0L
                     val totalVal = hargaTotalText.toLongOrNull() ?: 0L
 
-                    if (!isEditMode) {
-                        if (selectedItem == null) {
-                            viewModel.setErrorMessage("Silakan pilih barang terlebih dahulu.")
-                            onChangeItemRequested()
-                            return@Button
-                        }
-                        if (namaPenyewa.trim().isEmpty() || noWa.trim().isEmpty()) {
-                            viewModel.setErrorMessage("Nama dan Nomor WA penyewa wajib diisi.")
-                            return@Button
-                        }
-                        if (jmlInt <= 0) {
-                            viewModel.setErrorMessage("Jumlah disewa minimal 1.")
-                            return@Button
-                        }
-                        if (jmlInt > selectedItem.stokTersedia) {
-                            viewModel.setErrorMessage("Jumlah disewa ($jmlInt) melebihi stok yang tersedia (${selectedItem.stokTersedia}).")
-                            return@Button
-                        }
-                        if (dpVal < 0L) {
-                            viewModel.setErrorMessage("Uang muka / DP tidak boleh negatif.")
-                            return@Button
-                        }
-                        if (dpVal > totalVal) {
-                            viewModel.setErrorMessage("Uang Muka / DP tidak boleh melebihi Total Biaya Sewa.")
-                            return@Button
-                        }
+                    if (rentedItemsList.isEmpty()) {
+                        viewModel.setErrorMessage("Daftar barang yang disewa tidak boleh kosong.")
+                        return@Button
+                    }
+                    if (namaPenyewa.trim().isEmpty() || noWa.trim().isEmpty()) {
+                        viewModel.setErrorMessage("Nama dan Nomor WA penyewa wajib diisi.")
+                        return@Button
+                    }
+                    if (medsosPenyewa.trim().isEmpty()) {
+                        viewModel.setErrorMessage("Media sosial konsumen (IG/TikTok/FB) wajib diisi.")
+                        return@Button
+                    }
+                    if (dpVal < 0L) {
+                        viewModel.setErrorMessage("Uang muka / DP tidak boleh negatif.")
+                        return@Button
+                    }
+                    if (dpVal > totalVal) {
+                        viewModel.setErrorMessage("Uang Muka / DP tidak boleh melebihi Total Biaya Sewa.")
+                        return@Button
+                    }
 
-                        // Jika DP = 0 atau kosong: langsung simpan tanpa masuk ke layar metode pembayaran & QRIS
-                        if (dpVal == 0L) {
-                            viewModel.prosesPembayaranDanSimpanSewa(
-                                selectedItem = selectedItem,
-                                namaPenyewa = namaPenyewa,
-                                noWa = noWa,
-                                tanggalMulai = tglMulaiMs,
-                                tanggalKembali = tglKembaliMs,
-                                lamaHari = lamaHari,
-                                jumlah = jmlInt,
-                                hargaTotal = totalVal,
-                                dp = 0L,
-                                metodePembayaran = "-",
-                                catatan = catatan,
-                                onSuccess = { savedRental ->
-                                    createdRentalForNota = savedRental
-                                }
-                            )
+                    // Cek stok seluruh barang
+                    for (rState in rentedItemsList) {
+                        if (rState.jumlah > rState.item.stokTersedia && !isEditMode) {
+                            viewModel.setErrorMessage("Jumlah barang \"${rState.item.nama}\" (${rState.jumlah}) melebihi stok yang tersedia (${rState.item.stokTersedia}).")
                             return@Button
                         }
-                    } else {
-                        if (namaPenyewa.trim().isEmpty() || noWa.trim().isEmpty()) {
-                            viewModel.setErrorMessage("Nama dan Nomor WA penyewa wajib diisi.")
-                            return@Button
-                        }
-                        if (dpVal < 0L) {
-                            viewModel.setErrorMessage("Uang muka / DP tidak boleh negatif.")
-                            return@Button
-                        }
-                        if (dpVal > totalVal) {
-                            viewModel.setErrorMessage("Uang Muka / DP tidak boleh melebihi Total Biaya Sewa.")
-                            return@Button
-                        }
+                    }
+
+                    val rentalItemsToSave = rentedItemsList.map {
+                        RentalItem(
+                            itemId = it.item.id,
+                            nama = it.item.nama,
+                            kategori = it.item.kategori,
+                            hargaSatuan = it.item.hargaSewa,
+                            jumlah = it.jumlah,
+                            fotoBase64 = it.item.fotoBase64
+                        )
+                    }
+
+                    // Jika DP = 0: langsung simpan tanpa masuk ke layar pembayaran/QRIS
+                    if (dpVal == 0L && !isEditMode) {
+                        val primaryItem = rentedItemsList.firstOrNull()?.item
+                        val totalUnits = rentedItemsList.sumOf { it.jumlah }
+
+                        viewModel.prosesPembayaranDanSimpanSewa(
+                            selectedItem = primaryItem,
+                            namaPenyewa = namaPenyewa,
+                            noWa = noWa,
+                            medsosPenyewa = medsosPenyewa,
+                            tanggalMulai = tglMulaiMs,
+                            tanggalKembali = tglKembaliMs,
+                            lamaHari = lamaHari,
+                            jumlah = totalUnits,
+                            hargaTotal = totalVal,
+                            dp = 0L,
+                            metodePembayaran = "-",
+                            catatan = catatan,
+                            rentedItems = rentalItemsToSave,
+                            onSuccess = { savedRental ->
+                                viewModel.clearDraftForm()
+                                createdRentalForNota = savedRental
+                            }
+                        )
+                        return@Button
                     }
 
                     showPaymentScreen = true
@@ -696,16 +867,20 @@ fun SewaBaruBottomSheet(
                 modifier = Modifier
                     .fillMaxWidth()
                     .height(50.dp),
-                shape = RoundedCornerShape(8.dp),
-                colors = ButtonDefaults.buttonColors(containerColor = AccentGold, contentColor = DarkBackground, disabledContainerColor = DarkSurfaceVariant, disabledContentColor = TextSecondary)
+                shape = RoundedCornerShape(12.dp),
+                colors = ButtonDefaults.buttonColors(
+                    containerColor = AccentGold, contentColor = OnAccentGold,
+                    disabledContainerColor = DarkSurfaceVariant, disabledContentColor = TextSecondary
+                )
             ) {
                 if (isLoading) {
-                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = DarkBackground, strokeWidth = 2.dp)
+                    CircularProgressIndicator(modifier = Modifier.size(24.dp), color = OnAccentGold, strokeWidth = 2.dp)
                 } else {
                     Text(
-                        text = stringResource(R.string.btn_pay),
+                        text = if (dpLong > 0L) stringResource(R.string.btn_pay) else stringResource(R.string.btn_save),
                         fontSize = 16.sp,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        color = OnAccentGold
                     )
                 }
             }

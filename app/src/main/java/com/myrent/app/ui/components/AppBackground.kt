@@ -9,11 +9,10 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import com.myrent.app.ui.theme.AccentGold
-import com.myrent.app.ui.theme.DarkBackgroundBottom
-import com.myrent.app.ui.theme.DarkBackgroundTop
+import com.myrent.app.ui.theme.DarkBackground
 
 /**
- * Komponen Latar Belakang Komunal Mewah (Gradasi Arang Kecokelatan + Radial Ambient Gold Glow di Pojok)
+ * Komponen Latar Belakang Komunal Mewah dengan Warna Solid #171513 & Radial Ambient Gold Glow di Pojok
  */
 @Composable
 fun AppBackground(
@@ -25,15 +24,13 @@ fun AppBackground(
             val w = size.width
             val h = size.height
 
-            // 1. Base Vertical Gradient: #2A2622 (Atas) ke #171513 (Bawah)
+            // 1. Latar Belakang Warna Solid #171513 (Ganti dari Brush.verticalGradient)
             drawRect(
-                brush = Brush.verticalGradient(
-                    colors = listOf(DarkBackgroundTop, DarkBackgroundBottom)
-                ),
+                color = DarkBackground,
                 size = size
             )
 
-            // 2. Top-Right Radial Ambient Gold Glow (Alpha ~13% memudar ke Transparan)
+            // 2. Top-Right Radial Ambient Gold Glow (Alpha ~13% memudar ke Transparan - Elemen Dekorasi)
             drawRect(
                 brush = Brush.radialGradient(
                     colors = listOf(AccentGold.copy(alpha = 0.13f), Color.Transparent),
@@ -43,7 +40,7 @@ fun AppBackground(
                 size = size
             )
 
-            // 3. Bottom-Left Radial Ambient Gold Glow (Alpha ~11% memudar ke Transparan)
+            // 3. Bottom-Left Radial Ambient Gold Glow (Alpha ~11% memudar ke Transparan - Elemen Dekorasi)
             drawRect(
                 brush = Brush.radialGradient(
                     colors = listOf(AccentGold.copy(alpha = 0.11f), Color.Transparent),

@@ -1,7 +1,7 @@
 package com.myrent.app.data.rentals
 
 /**
- * Model data Transaksi Sewa ("rentals")
+ * Model data Transaksi Sewa ("rentals") dengan Dukungan Multi-Item & Media Sosial Konsumen
  */
 data class Rental(
     val id: String = "",
@@ -11,6 +11,7 @@ data class Rental(
     val customerId: String = "",
     val namaPenyewa: String = "",
     val noWa: String = "",
+    val medsosPenyewa: String = "",      // Akun Media Sosial Konsumen (IG / TikTok / FB)
     val tanggalMulai: Long = System.currentTimeMillis(),
     val tanggalKembali: Long = System.currentTimeMillis() + (24 * 60 * 60 * 1000),
     val lamaHari: Int = 1,
@@ -30,13 +31,67 @@ data class Rental(
     val metodePembayaran: String = "Tunai", // "Tunai", "QRIS", dll
     val pelunasanPada: Long? = null,      // Timestamp saat pelunasan dilakukan
     val jumlahPelunasan: Long = 0L,       // Nominal pelunasan sisa bayar
+    val items: List<RentalItem> = emptyList(), // Daftar rincian barang yang disewa (Multi-Item)
     val payments: List<PaymentRecord> = emptyList() // Riwayat riil catatan pembayaran DP & Pelunasan
 ) {
     /**
+     * Mendapatkan daftar rincian barang yang disewa.
+     * Jika `items` tidak kosong, mengembalikan `items`.
+     * Jika `items` kosong (transaksi lama 1 barang), otomatis membuat 1 objek RentalItem virtual.
+     */
+    fun getItemsList(): List<RentalItem> {
+        if (items.isNotEmpty()) return items
+
+        val unitPrice = if (jumlah > 0 && lamaHari > 0) hargaTotal / (jumlah * lamaHari.coerceAtLeast(1)) else hargaTotal
+        return listOf(
+            RentalItem(
+                itemId = itemId,
+                nama = namaBarang.ifEmpty { "Barang Sewa" },
+                kategori = "",
+                hargaSatuan = unitPrice,
+                jumlah = jumlah.coerceAtLeast(1),
+                fotoBase64 = ""
+            )
+        )
+    }
+
+    /**
+     * Teks singkat nama barang untuk kartu sewa, riwayat penyewa, dan daftar follow up
+     * Contoh 1 barang: "Jas Hitam"
+     * Contoh > 1 barang: "Jas Hitam +1 lainnya"
+     */
+    fun getNamaDisplay(): String {
+        val list = getItemsList()
+        if (list.isEmpty()) return namaBarang.ifEmpty { "Barang Sewa" }
+        return if (list.size == 1) {
+            list[0].nama
+        } else {
+            "${list[0].nama} +${list.size - 1} lainnya"
+        }
+    }
+
+    /**
+     * Teks rincian barang untuk template pesan WhatsApp
+     * Contoh: "Jas Hitam (1 unit), Sepatu (2 unit)"
+     */
+    fun getSummaryBarangWA(): String {
+        val list = getItemsList()
+        if (list.isEmpty()) return "${namaBarang} (${jumlah} unit)"
+        return list.joinToString(", ") { "${it.nama} (${it.jumlah} unit)" }
+    }
+
+    /**
+     * Mendapatkan total unit barang yang disewa dalam transaksi ini
+     */
+    fun getTotalUnitCount(): Int {
+        val list = getItemsList()
+        if (list.isEmpty()) return jumlah.coerceAtLeast(1)
+        return list.sumOf { it.jumlah }
+    }
+
+    /**
      * Mendapatkan daftar riwayat pembayaran lengkap.
-     * Jika `payments` kosong (transaksi lama), otomatis membuat objek PaymentRecord virtual
-     * dari nilai `dp` dan `jumlahPelunasan` / `pelunasanPada` tanpa merusak data lama.
-     * Koreksi Data Lama: Jika dp == hargaTotal DAN jumlahPelunasan > 0, DP virtual = hargaTotal - jumlahPelunasan.
+     * Jika `payments` kosong (transaksi lama), otomatis membuat objek PaymentRecord virtual.
      */
     fun getAllPaymentRecords(): List<PaymentRecord> {
         if (payments.isNotEmpty()) return payments

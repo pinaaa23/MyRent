@@ -393,7 +393,7 @@ fun DetailCustomerBottomSheet(
                                 modifier = Modifier.fillMaxWidth(),
                                 horizontalArrangement = Arrangement.SpaceBetween
                             ) {
-                                Text(rental.namaBarang, fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 14.sp)
+                                Text(rental.getNamaDisplay(), fontWeight = FontWeight.Bold, color = TextPrimary, fontSize = 14.sp)
                                 Text(formatRupiah(rental.hargaTotal), fontWeight = FontWeight.Bold, color = AccentGold, fontSize = 14.sp)
                             }
                             Spacer(modifier = Modifier.height(2.dp))

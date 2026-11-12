@@ -1,13 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<testsuite name="com.myrent.app.AppRevisionTest" tests="7" skipped="0" failures="0" errors="0" timestamp="2026-11-10T17:17:10" hostname="REFINAKUSUMA" time="0.023">
+<testsuite name="com.myrent.app.AppRevisionTest" tests="9" skipped="0" failures="0" errors="0" timestamp="2026-11-12T15:24:10" hostname="REFINAKUSUMA" time="0.031">
   <properties/>
-  <testcase name="testMapJenisMetode" classname="com.myrent.app.AppRevisionTest" time="0.009"/>
+  <testcase name="testMultiItemRental_DisplayNameAndSubtotal" classname="com.myrent.app.AppRevisionTest" time="0.025"/>
+  <testcase name="testMapJenisMetode" classname="com.myrent.app.AppRevisionTest" time="0.003"/>
   <testcase name="testDpExceedsTotal_IsInvalid" classname="com.myrent.app.AppRevisionTest" time="0.0"/>
   <testcase name="testNegativeDp_IsInvalid" classname="com.myrent.app.AppRevisionTest" time="0.0"/>
   <testcase name="testDpZero_SetsUnpaidStatus" classname="com.myrent.app.AppRevisionTest" time="0.001"/>
   <testcase name="testDpEqualsTotal_SetsPaidStatus" classname="com.myrent.app.AppRevisionTest" time="0.0"/>
-  <testcase name="testLegacyDoubleDpCorrection" classname="com.myrent.app.AppRevisionTest" time="0.005"/>
-  <testcase name="testReportSumEquality_TunaiNonTunaiUnspecifiedEqualsTotal" classname="com.myrent.app.AppRevisionTest" time="0.007"/>
+  <testcase name="testMultiItemRental_LegacyCompatibility" classname="com.myrent.app.AppRevisionTest" time="0.002"/>
+  <testcase name="testLegacyDoubleDpCorrection" classname="com.myrent.app.AppRevisionTest" time="0.0"/>
+  <testcase name="testReportSumEquality_TunaiNonTunaiUnspecifiedEqualsTotal" classname="com.myrent.app.AppRevisionTest" time="0.0"/>
   <system-out><![CDATA[]]></system-out>
   <system-err><![CDATA[]]></system-err>
 </testsuite>
