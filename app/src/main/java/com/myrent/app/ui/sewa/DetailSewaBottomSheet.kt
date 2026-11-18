@@ -19,7 +19,6 @@ import androidx.compose.material.icons.automirrored.filled.Send
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Payment
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
@@ -55,11 +54,12 @@ import com.myrent.app.ui.theme.AccentGold
 import com.myrent.app.ui.theme.DarkBackground
 import com.myrent.app.ui.theme.DarkSurface
 import com.myrent.app.ui.theme.DarkSurfaceVariant
+import com.myrent.app.ui.theme.OnAccentGold
 import com.myrent.app.ui.theme.TextPrimary
 import com.myrent.app.ui.theme.TextSecondary
 
 /**
- * Bottom Sheet Detail Transaksi Sewa & Fitur Pelunasan Pembayaran
+ * Bottom Sheet Detail Transaksi Sewa & Penyatuan Tombol "Dikembalikan" (Pelunasan + Pengembalian)
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -81,7 +81,7 @@ fun DetailSewaBottomSheet(
 
     val scrollState = rememberScrollState()
 
-    // 1. Tampilkan Nota Transaksi jika pelunasan telah diproses
+    // 1. Tampilkan Nota Transaksi jika pelunasan & pengembalian telah diproses
     if (updatedRentalForNota != null) {
         NotaTransaksiDialog(
             rental = updatedRentalForNota!!,
@@ -98,7 +98,7 @@ fun DetailSewaBottomSheet(
         return
     }
 
-    // 2. Tampilkan Layar Full-Screen Pembayaran Pelunasan
+    // 2. Tampilkan Layar Full-Screen Pembayaran Pelunasan (dikombinasikan dengan Pengembalian)
     if (showPelunasanScreen) {
         PembayaranScreen(
             totalBayar = rental.sisaBayar,
@@ -110,7 +110,9 @@ fun DetailSewaBottomSheet(
             onKonfirmasiPembayaran = { metode ->
                 showPelunasanScreen = false
                 viewModel.lunasiPembayaran(rental, metode) { savedRental ->
-                    updatedRentalForNota = savedRental
+                    viewModel.tandaiDikembalikan(savedRental) {
+                        updatedRentalForNota = savedRental.copy(status = "selesai")
+                    }
                 }
             }
         )
@@ -240,83 +242,52 @@ fun DetailSewaBottomSheet(
 
             Spacer(modifier = Modifier.height(20.dp))
 
-            // FITUR PELUNASAN PEMBAYARAN
-            if (rental.sisaBayar > 0L) {
+            // 1. TOMBOL EMAS UTAMA: "Dikembalikan" (Mengurus Pelunasan jika belum lunas + Pengembalian Barang)
+            if (rental.status == "berjalan") {
                 Button(
-                    onClick = { showPelunasanScreen = true },
+                    onClick = {
+                        if (rental.sisaBayar > 0L) {
+                            showPelunasanScreen = true
+                        } else {
+                            showReturnConfirmDialog = true
+                        }
+                    },
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(48.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = AccentGold, contentColor = DarkBackground)
+                        .height(50.dp),
+                    shape = RoundedCornerShape(12.dp),
+                    colors = ButtonDefaults.buttonColors(containerColor = AccentGold, contentColor = OnAccentGold)
                 ) {
-                    Icon(imageVector = Icons.Filled.Payment, contentDescription = "Pelunasan", modifier = Modifier.size(18.dp))
+                    Icon(imageVector = Icons.Filled.CheckCircle, contentDescription = "Dikembalikan", tint = OnAccentGold, modifier = Modifier.size(20.dp))
                     Spacer(modifier = Modifier.width(8.dp))
                     Text(
-                        text = "Pelunasan Pembayaran (${formatRupiah(rental.sisaBayar)})",
+                        text = "Dikembalikan",
                         fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
+                        fontSize = 16.sp,
+                        color = OnAccentGold
                     )
                 }
-            } else {
-                Button(
-                    onClick = {},
-                    enabled = false,
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(
-                        disabledContainerColor = DarkSurfaceVariant,
-                        disabledContentColor = Color(0xFF6BCB77)
-                    )
-                ) {
-                    Icon(imageVector = Icons.Filled.CheckCircle, contentDescription = "Lunas", modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(
-                        text = "Pembayaran Lunas",
-                        fontWeight = FontWeight.Bold,
-                        fontSize = 15.sp
-                    )
-                }
+
+                Spacer(modifier = Modifier.height(10.dp))
             }
 
-            Spacer(modifier = Modifier.height(10.dp))
-
-            // Tombol Kirim WA Nota
+            // 2. TOMBOL HIJAU: "Kirim WA Nota"
             Button(
                 onClick = { viewModel.kirimWhatsAppNota(context, rental) },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .height(48.dp),
-                shape = RoundedCornerShape(8.dp),
+                    .height(50.dp),
+                shape = RoundedCornerShape(12.dp),
                 colors = ButtonDefaults.buttonColors(containerColor = Color(0xFF25D366), contentColor = Color.White)
             ) {
-                Icon(imageVector = Icons.AutoMirrored.Filled.Send, contentDescription = "Kirim WA Nota", modifier = Modifier.size(18.dp))
+                Icon(imageVector = Icons.AutoMirrored.Filled.Send, contentDescription = "Kirim WA Nota", modifier = Modifier.size(20.dp))
                 Spacer(modifier = Modifier.width(8.dp))
-                Text(text = stringResource(R.string.btn_send_wa), fontWeight = FontWeight.Bold, fontSize = 15.sp)
-            }
-
-            // Tombol Sudah Dikembalikan (Jika status masih berjalan)
-            if (rental.status == "berjalan") {
-                Spacer(modifier = Modifier.height(10.dp))
-                Button(
-                    onClick = { showReturnConfirmDialog = true },
-                    modifier = Modifier
-                        .fillMaxWidth()
-                        .height(48.dp),
-                    shape = RoundedCornerShape(8.dp),
-                    colors = ButtonDefaults.buttonColors(containerColor = DarkSurfaceVariant, contentColor = TextPrimary)
-                ) {
-                    Icon(imageVector = Icons.Filled.CheckCircle, contentDescription = "Selesai", modifier = Modifier.size(18.dp))
-                    Spacer(modifier = Modifier.width(8.dp))
-                    Text(text = stringResource(R.string.btn_mark_returned), fontWeight = FontWeight.Bold, fontSize = 15.sp)
-                }
+                Text(text = stringResource(R.string.btn_send_wa), fontWeight = FontWeight.Bold, fontSize = 16.sp)
             }
 
             Spacer(modifier = Modifier.height(10.dp))
 
-            // Baris Tombol Edit & Hapus
+            // Baris Tombol Sekunder Edit & Hapus
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedButton(
                     onClick = {

@@ -165,11 +165,14 @@ class StoreProfileViewModel(
         noTelp: String,
         alamat: String,
         fotoBase64: String,
+        qrisBase64: String = "",
+        jamMaksimalPengembalian: String = "18.30",
         onSuccess: () -> Unit
     ) {
         val namaClean = namaToko.trim()
         val telpClean = noTelp.trim()
         val alamatClean = alamat.trim()
+        val jamClean = jamMaksimalPengembalian.ifEmpty { "18.30" }.trim()
 
         if (namaClean.isEmpty()) {
             _uiState.value = StoreProfileUiState.Error("Nama toko wajib diisi.")
@@ -197,6 +200,8 @@ class StoreProfileViewModel(
                 noTelp = telpClean,
                 alamat = alamatClean,
                 fotoBase64 = fotoBase64,
+                qrisBase64 = qrisBase64,
+                jamMaksimalPengembalian = jamClean,
                 updatedAt = System.currentTimeMillis()
             )
 

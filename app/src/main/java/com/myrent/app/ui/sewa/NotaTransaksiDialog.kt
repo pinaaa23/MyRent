@@ -91,7 +91,9 @@ fun NotaTransaksiDialog(
     val alamatToko = storeProfile.alamat.ifEmpty { userDoc.alamatToko.ifEmpty { cabangAlamat } }
     val noWaToko = storeProfile.noTelp.ifEmpty { userDoc.noWaToko.ifEmpty { cabangNoWa } }
     val headerText = storeConfigDoc.notaHeader.ifEmpty { DefaultStoreConfig.NOTA_HEADER_DEFAULT }
-    val footerText = storeConfigDoc.notaFooter.ifEmpty { DefaultStoreConfig.NOTA_FOOTER_DEFAULT }
+    val jamBatas = storeProfile.jamMaksimalPengembalian.ifEmpty { "18.30" }
+    val defaultFooterText = "* Mohon tunjukkan nota ini saat pengambilan dan pengembalian barang. Maksimal pengembalian pukul $jamBatas WIB.\nTerima kasih telah menyewa di $namaToko!"
+    val footerText = storeConfigDoc.notaFooter.ifEmpty { defaultFooterText }
     val fotoBase64 = storeProfile.fotoBase64.ifEmpty { userDoc.fotoProfilBase64 }
 
     val tglSewaStr = remember(rental.dibuatPada) {
@@ -288,9 +290,12 @@ fun NotaTransaksiDialog(
 
                     val displayMetode = if (rental.dp == 0L && rental.jumlahPelunasan == 0L) "-" else rental.metodePembayaran.ifEmpty { "-" }
 
-                    // Biaya, DP, Sisa, Metode, & Status Lunas
+                    // Biaya, DP, Pelunasan, Sisa, Metode, & Status Lunas
                     ReceiptInfoLine("Total Biaya", ": ${formatRupiah(rental.hargaTotal)}")
                     ReceiptInfoLine("Uang Muka", ": ${formatRupiah(rental.dp)}")
+                    if (rental.jumlahPelunasan > 0L) {
+                        ReceiptInfoLine("Pelunasan", ": ${formatRupiah(rental.jumlahPelunasan)}")
+                    }
                     ReceiptInfoLine("Sisa Bayar", ": ${formatRupiah(rental.sisaBayar)}")
                     ReceiptInfoLine("Metode", ": $displayMetode")
                     ReceiptInfoLine("Status", ": $statusBayarStr")

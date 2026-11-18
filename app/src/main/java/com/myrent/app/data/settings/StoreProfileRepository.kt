@@ -46,6 +46,8 @@ class StoreProfileRepository(
                 noTelp = snapshot.getString("noTelp") ?: "",
                 alamat = snapshot.getString("alamat") ?: "",
                 fotoBase64 = snapshot.getString("fotoBase64") ?: "",
+                qrisBase64 = snapshot.getString("qrisBase64") ?: "",
+                jamMaksimalPengembalian = snapshot.getString("jamMaksimalPengembalian") ?: "18.30",
                 updatedAt = snapshot.getLong("updatedAt") ?: System.currentTimeMillis()
             )
 
@@ -70,6 +72,8 @@ class StoreProfileRepository(
             noTelp = snapshot.getString("noTelp") ?: "",
             alamat = snapshot.getString("alamat") ?: "",
             fotoBase64 = snapshot.getString("fotoBase64") ?: "",
+            qrisBase64 = snapshot.getString("qrisBase64") ?: "",
+            jamMaksimalPengembalian = snapshot.getString("jamMaksimalPengembalian") ?: "18.30",
             updatedAt = snapshot.getLong("updatedAt") ?: System.currentTimeMillis()
         )
     }
@@ -87,6 +91,8 @@ class StoreProfileRepository(
             "noTelp" to profile.noTelp.trim(),
             "alamat" to profile.alamat.trim(),
             "fotoBase64" to profile.fotoBase64,
+            "qrisBase64" to profile.qrisBase64,
+            "jamMaksimalPengembalian" to profile.jamMaksimalPengembalian.ifEmpty { "18.30" }.trim(),
             "updatedAt" to System.currentTimeMillis()
         )
         getProfilDocRef(uid).set(map, SetOptions.merge()).await()

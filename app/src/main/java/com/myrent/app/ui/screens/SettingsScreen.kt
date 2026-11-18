@@ -1,9 +1,14 @@
 package com.myrent.app.ui.screens
 
+import android.net.Uri
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -14,14 +19,17 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.ExitToApp
 import androidx.compose.material.icons.automirrored.filled.Message
 import androidx.compose.material.icons.filled.Category
 import androidx.compose.material.icons.filled.Person
+import androidx.compose.material.icons.filled.QrCode2
 import androidx.compose.material.icons.filled.Receipt
 import androidx.compose.material.icons.filled.Store
 import androidx.compose.material3.AlertDialog
@@ -32,16 +40,20 @@ import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
+import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -50,6 +62,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
@@ -67,9 +80,10 @@ import com.myrent.app.ui.theme.GoldBorderColor
 import com.myrent.app.ui.theme.OnAccentGold
 import com.myrent.app.ui.theme.TextPrimary
 import com.myrent.app.ui.theme.TextSecondary
+import kotlinx.coroutines.launch
 
 /**
- * Layar Pengaturan Aplikasi MyRent (1 Akun = 1 Toko Mandiri)
+ * Layar Pengaturan Aplikasi MyRent dengan Menu Upload QRIS Toko di Bawah Kustom Pesan Follow Up
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -81,6 +95,9 @@ fun SettingsScreen(
     onLogoutClick: () -> Unit,
     settingsViewModel: SettingsViewModel = viewModel()
 ) {
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
+
     val storeProfile by settingsViewModel.storeProfile.collectAsState()
     val userDoc by settingsViewModel.userDocState.collectAsState()
     val userName by settingsViewModel.userName.collectAsState()
@@ -89,11 +106,26 @@ fun SettingsScreen(
 
     var showKelolaKategoriDialog by remember { mutableStateOf(false) }
     var showLogoutConfirmDialog by remember { mutableStateOf(false) }
+    var showQrisUploadSheet by remember { mutableStateOf(false) }
 
     val fotoRepo = remember { FotoRepository() }
+    val sheetState = rememberModalBottomSheetState()
 
     val displayFotoBase64 = storeProfile.fotoBase64.ifEmpty { userDoc.fotoProfilBase64 }
     val displayNamaToko = storeProfile.nama.ifEmpty { userNamaToko }
+
+    val qrisPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickVisualMedia()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            coroutineScope.launch {
+                val compressed = fotoRepo.compressUriToBase64(context, uri)
+                if (compressed != null) {
+                    settingsViewModel.saveQrisImage(context, compressed) {}
+                }
+            }
+        }
+    }
 
     AppBackground {
         Scaffold(
@@ -115,6 +147,7 @@ fun SettingsScreen(
                     .fillMaxSize()
                     .padding(innerPadding)
                     .padding(16.dp)
+                    .verticalScroll(rememberScrollState())
             ) {
                 // Kartu Profil Pengguna & Nama Toko
                 Card(
@@ -197,6 +230,7 @@ fun SettingsScreen(
                 // Menu 1: Profil Toko
                 SettingsMenuItem(
                     title = "Profil Toko",
+                    subtitle = "Atur nama, nomor telepon, dan alamat toko",
                     icon = Icons.Filled.Store,
                     onClick = onNavigateToStoreProfile
                 )
@@ -206,6 +240,7 @@ fun SettingsScreen(
                 // Menu 2: Kelola Kategori
                 SettingsMenuItem(
                     title = stringResource(R.string.menu_manage_category),
+                    subtitle = "Tambah, ubah, atau hapus kategori barang",
                     icon = Icons.Filled.Category,
                     onClick = {
                         settingsViewModel.resetUiState()
@@ -218,6 +253,7 @@ fun SettingsScreen(
                 // Menu 3: Kustom Nota
                 SettingsMenuItem(
                     title = "Kustom Nota",
+                    subtitle = "Atur judul, header, dan footer nota cetak",
                     icon = Icons.Filled.Receipt,
                     onClick = onNavigateToCustomReceipt
                 )
@@ -227,11 +263,22 @@ fun SettingsScreen(
                 // Menu 4: Kustom Pesan Follow Up
                 SettingsMenuItem(
                     title = "Kustom Pesan Follow Up",
+                    subtitle = "Atur pesan WA pengingat pengembalian & nota",
                     icon = Icons.AutoMirrored.Filled.Message,
                     onClick = onNavigateToWaTemplates
                 )
 
-                Spacer(modifier = Modifier.weight(1f))
+                Spacer(modifier = Modifier.height(12.dp))
+
+                // Menu 5: Upload QRIS Toko (Berada tepat di bawah Kustom Pesan Follow Up)
+                SettingsMenuItem(
+                    title = "Upload QRIS Toko",
+                    subtitle = "Atur barcode QRIS pembayaran toko",
+                    icon = Icons.Filled.QrCode2,
+                    onClick = { showQrisUploadSheet = true }
+                )
+
+                Spacer(modifier = Modifier.height(32.dp))
 
                 // Tombol Keluar (Logout)
                 Button(
@@ -255,6 +302,107 @@ fun SettingsScreen(
                 }
 
                 Spacer(modifier = Modifier.height(16.dp))
+            }
+        }
+    }
+
+    // Modal BottomSheet Upload Barcode QRIS Toko
+    if (showQrisUploadSheet) {
+        ModalBottomSheet(
+            onDismissRequest = { showQrisUploadSheet = false },
+            sheetState = sheetState,
+            containerColor = DarkSurface
+        ) {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(24.dp),
+                horizontalAlignment = Alignment.CenterHorizontally
+            ) {
+                Text(
+                    text = "Upload Barcode QRIS Toko",
+                    fontSize = 18.sp,
+                    fontWeight = FontWeight.Bold,
+                    color = TextPrimary
+                )
+
+                Spacer(modifier = Modifier.height(4.dp))
+
+                Text(
+                    text = "Unggah barcode QRIS resmi toko Anda untuk ditampilkan di layar pembayaran konsumen.",
+                    fontSize = 13.sp,
+                    color = TextSecondary,
+                    modifier = Modifier.padding(bottom = 16.dp)
+                )
+
+                val qrisBitmap = remember(storeProfile.qrisBase64) {
+                    if (storeProfile.qrisBase64.isNotEmpty()) fotoRepo.base64ToBitmap(storeProfile.qrisBase64) else null
+                }
+
+                if (qrisBitmap != null) {
+                    Image(
+                        bitmap = qrisBitmap.asImageBitmap(),
+                        contentDescription = "QRIS Toko",
+                        contentScale = ContentScale.Fit,
+                        modifier = Modifier
+                            .size(220.dp)
+                            .clip(RoundedCornerShape(12.dp))
+                            .background(Color.White)
+                            .padding(8.dp)
+                    )
+
+                    Spacer(modifier = Modifier.height(20.dp))
+
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(10.dp)
+                    ) {
+                        OutlinedButton(
+                            onClick = {
+                                qrisPickerLauncher.launch(
+                                    PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                                )
+                            },
+                            modifier = Modifier.weight(1f).height(46.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = AccentGold)
+                        ) {
+                            Text("Ganti QRIS", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        }
+
+                        OutlinedButton(
+                            onClick = {
+                                settingsViewModel.saveQrisImage(context, "") {
+                                    showQrisUploadSheet = false
+                                }
+                            },
+                            modifier = Modifier.weight(1f).height(46.dp),
+                            shape = RoundedCornerShape(10.dp),
+                            colors = ButtonDefaults.outlinedButtonColors(contentColor = Color(0xFFFF6B6B))
+                        ) {
+                            Text("Hapus", fontSize = 14.sp, fontWeight = FontWeight.Bold)
+                        }
+                    }
+                } else {
+                    Button(
+                        onClick = {
+                            qrisPickerLauncher.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                            )
+                        },
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .height(50.dp),
+                        shape = RoundedCornerShape(12.dp),
+                        colors = ButtonDefaults.buttonColors(containerColor = AccentGold, contentColor = OnAccentGold)
+                    ) {
+                        Icon(Icons.Filled.QrCode2, contentDescription = null, tint = OnAccentGold, modifier = Modifier.size(20.dp))
+                        Spacer(modifier = Modifier.width(8.dp))
+                        Text("Unggah Barcode QRIS Toko", fontSize = 15.sp, fontWeight = FontWeight.Bold, color = OnAccentGold)
+                    }
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
             }
         }
     }
@@ -293,6 +441,7 @@ fun SettingsScreen(
 @Composable
 fun SettingsMenuItem(
     title: String,
+    subtitle: String = "",
     icon: ImageVector,
     onClick: () -> Unit
 ) {
@@ -315,12 +464,22 @@ fun SettingsMenuItem(
                 modifier = Modifier.size(24.dp)
             )
             Spacer(modifier = Modifier.width(16.dp))
-            Text(
-                text = title,
-                fontSize = 16.sp,
-                fontWeight = FontWeight.SemiBold,
-                color = TextPrimary
-            )
+            Column(modifier = Modifier.weight(1f)) {
+                Text(
+                    text = title,
+                    fontSize = 16.sp,
+                    fontWeight = FontWeight.SemiBold,
+                    color = TextPrimary
+                )
+                if (subtitle.isNotEmpty()) {
+                    Spacer(modifier = Modifier.height(2.dp))
+                    Text(
+                        text = subtitle,
+                        fontSize = 12.sp,
+                        color = TextSecondary
+                    )
+                }
+            }
         }
     }
 }

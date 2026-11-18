@@ -1,5 +1,6 @@
 package com.myrent.app.ui.pengaturan
 
+import android.content.Context
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.google.firebase.firestore.FirebaseFirestore
@@ -28,7 +29,7 @@ sealed class SettingsUiState {
 }
 
 /**
- * ViewModel untuk mengelola Layar Pengaturan, Profil Toko, Kustom Nota, & Template WA
+ * ViewModel untuk mengelola Layar Pengaturan, Profil Toko, Kustom Nota, Template WA, & Upload QRIS Toko
  */
 class SettingsViewModel(
     private val authRepository: AuthRepository = AuthRepository(),
@@ -77,6 +78,21 @@ class SettingsViewModel(
                 _userName.value = doc.nama
                 _userNamaToko.value = doc.namaToko.ifEmpty { "Nama toko belum diisi" }
                 _userEmail.value = doc.email
+            }
+        }
+    }
+
+    fun saveQrisImage(context: Context, qrisBase64: String, onSuccess: () -> Unit) {
+        viewModelScope.launch {
+            _uiState.value = SettingsUiState.Loading
+            val currentProfile = storeProfile.value
+            val updated = currentProfile.copy(qrisBase64 = qrisBase64)
+            val res = storeProfileRepository.saveStoreProfile(updated)
+            res.onSuccess {
+                _uiState.value = SettingsUiState.Idle
+                onSuccess()
+            }.onFailure {
+                _uiState.value = SettingsUiState.Error("Gagal menyimpan barcode QRIS, periksa koneksi internet.")
             }
         }
     }

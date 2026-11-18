@@ -22,6 +22,7 @@ import com.myrent.app.data.settings.StoreConfigRepository
 import com.myrent.app.data.settings.StoreProfileDoc
 import com.myrent.app.data.settings.StoreProfileRepository
 import com.myrent.app.data.settings.TemplateReplacer
+import com.myrent.app.data.settings.WaTemplates
 import com.myrent.app.ui.screens.formatDate
 import com.myrent.app.ui.screens.formatRupiah
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -436,32 +437,16 @@ class RentalViewModel(
             val storeProfileDoc = storeProfileRepository.getStoreProfile().getOrDefault(StoreProfileDoc())
             val storeConfigDoc = storeConfigRepository.getStoreConfig().getOrDefault(StoreConfigDoc())
 
-            val template = storeConfigDoc.templatePesanNota.ifEmpty { DefaultStoreConfig.TEMPLATE_NOTA_DEFAULT }
-            val tglMulai = formatDate(rental.tanggalMulai)
-            val tglKembali = formatDate(rental.tanggalKembali)
-
             val tokoNama = storeProfileDoc.nama.ifEmpty { userDoc.namaToko.ifEmpty { "MYRENT STORE" } }
-            val alamatStr = storeProfileDoc.alamat.ifEmpty { userDoc.alamatToko }
             val telpStr = storeProfileDoc.noTelp.ifEmpty { userDoc.noWaToko }
+            val jamBatas = storeProfileDoc.jamMaksimalPengembalian.ifEmpty { "18.30" }
 
-            val pelunasanTglStr = if (rental.pelunasanPada != null) formatDate(rental.pelunasanPada) else ""
-
-            val pesan = TemplateReplacer.replaceVariables(
-                template = template,
-                nama = rental.namaPenyewa,
-                barang = rental.getSummaryBarangWA(),
-                tanggal = "$tglMulai s/d $tglKembali (${rental.lamaHari} Hari)",
-                total = formatRupiah(rental.hargaTotal),
-                dp = formatRupiah(rental.dp),
-                sisa = formatRupiah(rental.sisaBayar),
-                invoice = rental.invoiceId.ifEmpty { "INV-${rental.dibuatPada}" },
-                toko = tokoNama,
-                catatan = rental.catatan,
-                telpToko = telpStr,
-                alamatToko = alamatStr,
-                jumlahPelunasan = rental.jumlahPelunasan,
-                pelunasanMetode = rental.metodePembayaran,
-                pelunasanTanggalStr = pelunasanTglStr
+            val pesan = WaTemplates.buildNotaMessage(
+                rental = rental,
+                namaToko = tokoNama,
+                noWaToko = telpStr,
+                jamBatas = jamBatas,
+                customTemplate = storeConfigDoc.templatePesanNota
             )
 
             try {

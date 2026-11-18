@@ -1,6 +1,7 @@
 package com.myrent.app.ui.sewa
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -21,6 +22,7 @@ import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Money
 import androidx.compose.material.icons.filled.QrCode2
+import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.Card
@@ -32,22 +34,30 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.RadioButtonDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.myrent.app.R
+import com.myrent.app.data.foto.FotoRepository
+import com.myrent.app.data.settings.StoreProfileDoc
+import com.myrent.app.data.settings.StoreProfileRepository
 import com.myrent.app.ui.components.AppBackground
 import com.myrent.app.ui.screens.formatRupiah
 import com.myrent.app.ui.theme.AccentGold
@@ -59,12 +69,12 @@ import com.myrent.app.ui.theme.TextPrimary
 import com.myrent.app.ui.theme.TextSecondary
 
 /**
- * Layar Full-Screen Pembayaran (Pilihan Tunai vs Tampilan Full QRIS dengan Nominal DP / Pelunasan yang Presisi)
+ * Layar Full-Screen Pembayaran (Pilihan Tunai vs Tampilan QRIS Resmi Toko)
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PembayaranScreen(
-    totalBayar: Long, // Nominal yang dibayar sekarang (DP saat sewa baru, Sisa Bayar saat pelunasan)
+    totalBayar: Long,
     namaPenyewa: String,
     namaBarang: String,
     jumlahUnit: Int,
@@ -74,6 +84,11 @@ fun PembayaranScreen(
 ) {
     var selectedMetode by remember { mutableStateOf("QRIS") }
     var isQrisFullScreen by remember { mutableStateOf(false) }
+    var showNoQrisWarningDialog by remember { mutableStateOf(false) }
+
+    val storeProfileRepo = remember { StoreProfileRepository() }
+    val storeProfile by storeProfileRepo.getStoreProfileFlow().collectAsState(StoreProfileDoc())
+    val fotoRepo = remember { FotoRepository() }
 
     val scrollState = rememberScrollState()
 
@@ -85,6 +100,8 @@ fun PembayaranScreen(
             namaBarang = namaBarang,
             jumlahUnit = jumlahUnit,
             cabangNama = cabangNama,
+            qrisBase64 = storeProfile.qrisBase64,
+            fotoRepo = fotoRepo,
             onBack = { isQrisFullScreen = false },
             onConfirm = { onKonfirmasiPembayaran("QRIS") }
         )
@@ -255,7 +272,13 @@ fun PembayaranScreen(
                 // Tombol Aksi
                 if (selectedMetode == "QRIS") {
                     Button(
-                        onClick = { isQrisFullScreen = true },
+                        onClick = {
+                            if (storeProfile.qrisBase64.isEmpty()) {
+                                showNoQrisWarningDialog = true
+                            } else {
+                                isQrisFullScreen = true
+                            }
+                        },
                         modifier = Modifier
                             .fillMaxWidth()
                             .height(52.dp),
@@ -283,10 +306,25 @@ fun PembayaranScreen(
             }
         }
     }
+
+    // Dialog Peringatan jika QRIS Toko belum diunggah di Pengaturan
+    if (showNoQrisWarningDialog) {
+        AlertDialog(
+            onDismissRequest = { showNoQrisWarningDialog = false },
+            title = { Text("Barcode QRIS Belum Diunggah", color = TextPrimary, fontWeight = FontWeight.Bold) },
+            text = { Text("Barcode QRIS toko belum diunggah. Silakan unggah gambar QRIS di menu Pengaturan terlebih dahulu.", color = TextSecondary) },
+            confirmButton = {
+                TextButton(onClick = { showNoQrisWarningDialog = false }) {
+                    Text("Mengerti", color = AccentGold, fontWeight = FontWeight.Bold)
+                }
+            },
+            containerColor = DarkSurface
+        )
+    }
 }
 
 /**
- * Tampilan Khusus Full-Screen Kode QRIS (Layar Penuh HP)
+ * Tampilan Khusus Full-Screen Kode QRIS Statis Toko
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -296,9 +334,15 @@ fun FullScreenQrisView(
     namaBarang: String,
     jumlahUnit: Int,
     cabangNama: String,
+    qrisBase64: String,
+    fotoRepo: FotoRepository,
     onBack: () -> Unit,
     onConfirm: () -> Unit
 ) {
+    val qrisBitmap = remember(qrisBase64) {
+        if (qrisBase64.isNotEmpty()) fotoRepo.base64ToBitmap(qrisBase64) else null
+    }
+
     AppBackground {
         Scaffold(
             topBar = {
@@ -368,12 +412,21 @@ fun FullScreenQrisView(
 
                         Spacer(modifier = Modifier.height(16.dp))
 
-                        Icon(
-                            imageVector = Icons.Filled.QrCode2,
-                            contentDescription = "QR Code Full",
-                            tint = Color.Black,
-                            modifier = Modifier.size(240.dp)
-                        )
+                        if (qrisBitmap != null) {
+                            Image(
+                                bitmap = qrisBitmap.asImageBitmap(),
+                                contentDescription = "Barcode QRIS Toko",
+                                contentScale = ContentScale.Fit,
+                                modifier = Modifier.size(240.dp)
+                            )
+                        } else {
+                            Icon(
+                                imageVector = Icons.Filled.QrCode2,
+                                contentDescription = "QR Code Default",
+                                tint = Color.Black,
+                                modifier = Modifier.size(240.dp)
+                            )
+                        }
 
                         Spacer(modifier = Modifier.height(16.dp))
 

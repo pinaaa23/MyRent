@@ -404,7 +404,7 @@ fun FollowUpCard(
                 ) {
                     Icon(imageVector = Icons.AutoMirrored.Filled.Send, contentDescription = "Kirim WA", modifier = Modifier.size(16.dp))
                     Spacer(modifier = Modifier.width(6.dp))
-                    Text(text = stringResource(R.string.btn_send_wa), fontSize = 12.sp, fontWeight = FontWeight.Bold)
+                    Text(text = "Ingatkan Pengembalian", fontSize = 12.sp, fontWeight = FontWeight.Bold)
                 }
             }
         }

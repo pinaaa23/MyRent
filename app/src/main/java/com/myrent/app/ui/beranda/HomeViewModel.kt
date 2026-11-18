@@ -13,7 +13,9 @@ import com.myrent.app.data.rentals.RentalRepository
 import com.myrent.app.data.settings.DefaultStoreConfig
 import com.myrent.app.data.settings.StoreConfigDoc
 import com.myrent.app.data.settings.StoreConfigRepository
-import com.myrent.app.data.settings.TemplateReplacer
+import com.myrent.app.data.settings.StoreProfileDoc
+import com.myrent.app.data.settings.StoreProfileRepository
+import com.myrent.app.data.settings.WaTemplates
 import com.myrent.app.ui.screens.formatDate
 import com.myrent.app.ui.screens.formatRupiah
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -40,6 +42,7 @@ class HomeViewModel(
     private val authRepository: AuthRepository = AuthRepository(),
     private val rentalRepository: RentalRepository = RentalRepository(),
     private val storeConfigRepository: StoreConfigRepository = StoreConfigRepository(),
+    private val storeProfileRepository: StoreProfileRepository = StoreProfileRepository(),
     private val firestore: FirebaseFirestore = FirebaseFirestore.getInstance()
 ) : ViewModel() {
 
@@ -167,26 +170,25 @@ class HomeViewModel(
 
         viewModelScope.launch {
             val userDoc = authRepository.getUserProfile().getOrDefault(UserDoc())
+            val storeProfile = storeProfileRepository.getStoreProfile().getOrDefault(StoreProfileDoc())
             val storeConfig = storeConfigRepository.getStoreConfig().getOrDefault(StoreConfigDoc())
 
-            val rawTemplate = when (item.type) {
-                "TELAT" -> storeConfig.templatePesanTelat.ifEmpty { DefaultStoreConfig.TEMPLATE_TELAT_DEFAULT }
-                "H-1" -> storeConfig.templatePesanH1.ifEmpty { DefaultStoreConfig.TEMPLATE_H1_DEFAULT }
-                else -> storeConfig.templatePesanH.ifEmpty { DefaultStoreConfig.TEMPLATE_H_DEFAULT }
+            val tokoNama = storeProfile.nama.ifEmpty { userDoc.namaToko.ifEmpty { "MyRent Store" } }
+            val jamBatas = storeProfile.jamMaksimalPengembalian.ifEmpty { "18.30" }
+
+            val customTpl = when (item.type) {
+                "TELAT" -> storeConfig.templatePesanTelat
+                "H-1" -> storeConfig.templatePesanH1
+                else -> storeConfig.templatePesanH
             }
 
-            val tglStr = formatDate(rental.tanggalKembali)
-            val pesan = TemplateReplacer.replaceVariables(
-                template = rawTemplate,
-                nama = rental.namaPenyewa,
-                barang = rental.getSummaryBarangWA(),
-                tanggal = tglStr,
-                total = formatRupiah(rental.hargaTotal),
-                dp = formatRupiah(rental.dp),
-                sisa = formatRupiah(rental.sisaBayar),
-                invoice = rental.invoiceId,
-                toko = userDoc.namaToko.ifEmpty { "Kusuma Rent" },
-                telat = item.overdueDays.toString()
+            val pesan = WaTemplates.buildFollowUpMessage(
+                rental = rental,
+                type = item.type,
+                overdueDays = item.overdueDays,
+                namaToko = tokoNama,
+                jamBatas = jamBatas,
+                customTemplate = customTpl
             )
 
             val fieldToUpdate = if (item.type == "H-1") "sudahFollowUpH1" else "sudahFollowUpH"
